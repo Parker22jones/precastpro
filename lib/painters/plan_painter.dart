@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../models/pipe_penetration.dart';
+import 'label_layout.dart';
 
 /// Top-down view: the structure barrel with every penetration placed at its
 /// exact clockwise angle.
@@ -27,10 +28,11 @@ class PlanPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = background);
+    final labels = LabelPlacer(size);
 
     final center = Offset(size.width / 2, size.height / 2 + 8);
     final outsideRadiusIn = insideDiameterIn / 2 + wallThicknessIn;
-    final available = math.min(size.width, size.height) / 2 - 54;
+    final available = math.min(size.width, size.height) / 2 - 64;
     final scale = math.max(available, 20.0) / (outsideRadiusIn + 14);
 
     double r(double inches) => inches * scale;
@@ -39,10 +41,11 @@ class PlanPainter extends CustomPainter {
       return center + Offset(math.cos(rad), math.sin(rad)) * r(radiusIn);
     }
 
-    _label(canvas, 'PLAN VIEW', const Offset(10, 6), 12, bold: true, color: const Color(0xFF263238));
-    _label(canvas, '${insideDiameterIn.toStringAsFixed(0)}" I.D. x ${wallThicknessIn.toStringAsFixed(0)}" WALL',
+    labels.draw(canvas, 'PLAN VIEW', const Offset(10, 6), 12,
+        bold: true, color: const Color(0xFF263238));
+    labels.draw(canvas, '${insideDiameterIn.toStringAsFixed(0)}" I.D. x ${wallThicknessIn.toStringAsFixed(0)}" WALL',
         Offset(size.width - 10, 6), 9,
-        alignRight: true, color: const Color(0xFF607D8B));
+        align: LabelAnchor.right, color: const Color(0xFF607D8B));
 
     // Wall annulus.
     canvas.drawCircle(center, r(outsideRadiusIn), Paint()..color = _concrete);
@@ -56,7 +59,8 @@ class PlanPainter extends CustomPainter {
       final p2 = pt(a.toDouble(), outsideRadiusIn + 5);
       canvas.drawLine(p1, p2, _stroke(const Color(0xFF90A4AE), 1));
       final labelPt = pt(a.toDouble(), outsideRadiusIn + 12);
-      _label(canvas, '$a°', labelPt - const Offset(9, 5), 7.5, color: const Color(0xFF78909C));
+      labels.draw(canvas, '$a°', labelPt - const Offset(0, 5), 7.5,
+          align: LabelAnchor.center, color: const Color(0xFF78909C), avoidOverlap: false);
     }
 
     // North arrow.
@@ -69,7 +73,8 @@ class PlanPainter extends CustomPainter {
       ..lineTo(nTip.dx + 4, nTip.dy + 8)
       ..close();
     canvas.drawPath(head, Paint()..color = const Color(0xFF263238));
-    _label(canvas, 'N', nTip - const Offset(4, 18), 11, bold: true, color: const Color(0xFF263238));
+    labels.draw(canvas, 'N', nTip - const Offset(0, 18), 11,
+        align: LabelAnchor.center, bold: true, color: const Color(0xFF263238));
 
     // Pipe penetrations.
     for (final pipe in pipes) {
@@ -96,19 +101,25 @@ class PlanPainter extends CustomPainter {
       canvas.drawLine(center, pt(angle, outsideRadiusIn + 18), _stroke(color, 1.0));
 
       final labelPt = pt(angle, outsideRadiusIn + 30);
-      _label(
+      final dx = labelPt.dx - center.dx;
+      final align = dx.abs() < r(outsideRadiusIn) * 0.35
+          ? LabelAnchor.center
+          : dx < 0
+              ? LabelAnchor.right
+              : LabelAnchor.left;
+      labels.draw(
         canvas,
         '${pipe.name}\n${pipe.outsideDiameterIn.toStringAsFixed(1)}" @ '
         '${angle.toStringAsFixed(0)}° (${pipe.clockPosition})',
-        labelPt - Offset(angle > 180 ? 2 : -2, 10),
+        labelPt - const Offset(0, 10),
         8.5,
-        alignRight: angle > 180,
+        align: align,
         color: color,
       );
     }
 
     if (conflictedPipes.isNotEmpty) {
-      _label(canvas, '⚠ PENETRATION CONFLICT', Offset(10, size.height - 20), 11,
+      labels.draw(canvas, '⚠ PENETRATION CONFLICT', Offset(10, size.height - 20), 11,
           bold: true, color: const Color(0xFFD50000));
     }
   }
@@ -116,30 +127,6 @@ class PlanPainter extends CustomPainter {
   double _halfAngleDeg(double pipeRadiusIn, double structureRadiusIn) {
     final ratio = (pipeRadiusIn / structureRadiusIn).clamp(-0.999, 0.999);
     return math.asin(ratio) * 180 / math.pi;
-  }
-
-  void _label(
-    Canvas canvas,
-    String text,
-    Offset at,
-    double fontSize, {
-    bool alignRight = false,
-    bool bold = false,
-    Color color = Colors.black,
-  }) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontSize: fontSize,
-          color: color,
-          fontWeight: bold ? FontWeight.bold : FontWeight.w500,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: alignRight ? TextAlign.right : TextAlign.left,
-    )..layout();
-    painter.paint(canvas, alignRight ? Offset(at.dx - painter.width, at.dy) : at);
   }
 
   Paint _stroke(Color color, double width) => Paint()

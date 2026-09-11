@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../logic/structure_layout.dart';
 import '../models/pipe_penetration.dart';
 import '../models/precast_piece.dart';
+import 'label_layout.dart';
 
 /// Scaled side profile of the stacked structure with seams and pipe entries.
 class ElevationPainter extends CustomPainter {
@@ -29,6 +30,7 @@ class ElevationPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = background);
+    final labels = LabelPlacer(size);
 
     final bottomElev = layout.floorBottomElevationFt;
     final topElev = math.max(layout.topOfStackElevationFt, bottomElev + 1);
@@ -50,7 +52,7 @@ class ElevationPainter extends CustomPainter {
     double y(double elevFt) => marginTop + (topElev - elevFt) * 12 * scale;
     double x(double inchesFromCenter) => centerX + inchesFromCenter * scale;
 
-    _drawTitle(canvas, size, 'ELEVATION VIEW', scale);
+    _drawTitle(labels, canvas, size, 'ELEVATION VIEW', scale);
 
     // 8" base floor.
     final floorHalf = layout.outsideDiameterIn / 2;
@@ -62,7 +64,7 @@ class ElevationPainter extends CustomPainter {
     );
     canvas.drawRect(floorRect, Paint()..color = _concreteDark);
     canvas.drawRect(floorRect, _stroke(_outline, 1.4));
-    _label(canvas, '8" BASE FLOOR', Offset(x(floorHalf) + 6, floorRect.center.dy - 6), 9,
+    labels.draw(canvas, '8" BASE FLOOR', Offset(x(floorHalf) + 6, floorRect.center.dy - 6), 9,
         color: const Color(0xFF546E7A));
 
     // Stacked pieces.
@@ -105,12 +107,12 @@ class ElevationPainter extends CustomPainter {
       }
 
       if ((bottom - top).abs() > 11) {
-        _label(
+        labels.draw(
           canvas,
           p.description,
           Offset(x(-halfOut) - 6, (top + bottom) / 2 - 5),
           8.5,
-          alignRight: true,
+          align: LabelAnchor.right,
           color: const Color(0xFF37474F),
         );
       }
@@ -125,9 +127,9 @@ class ElevationPainter extends CustomPainter {
     }
 
     // Rim and invert reference lines.
-    _referenceLine(canvas, y(layout.rimElevationFt), x(-layout.outsideDiameterIn / 2) - 16,
+    _referenceLine(labels, canvas, y(layout.rimElevationFt), x(-layout.outsideDiameterIn / 2) - 16,
         x(layout.outsideDiameterIn / 2) + 84, 'RIM ${layout.rimElevationFt.toStringAsFixed(2)}');
-    _referenceLine(canvas, y(layout.invertElevationFt), x(-layout.outsideDiameterIn / 2) - 16,
+    _referenceLine(labels, canvas, y(layout.invertElevationFt), x(-layout.outsideDiameterIn / 2) - 16,
         x(layout.outsideDiameterIn / 2) + 84, 'INV ${layout.invertElevationFt.toStringAsFixed(2)}');
 
     // Pipe penetrations.
@@ -151,28 +153,28 @@ class ElevationPainter extends CustomPainter {
       _dashedLine(canvas, Offset(x(-layout.outsideDiameterIn / 2) - 4, yInv),
           Offset(x(layout.outsideDiameterIn / 2) + 4, yInv), _stroke(color, 1.0));
 
-      _label(
+      labels.draw(
         canvas,
         '${pipe.name}  ${pipe.outsideDiameterIn.toStringAsFixed(1)}" OD\n'
         'INV ${pipe.invertElevationFt.toStringAsFixed(2)}  @ ${pipe.clockPosition}',
         Offset(onRight ? outX + 5 : outX - 5, (yCrown + yInv) / 2 - 12),
         8.5,
-        alignRight: !onRight,
+        align: onRight ? LabelAnchor.left : LabelAnchor.right,
         color: color,
       );
     }
 
-    _drawScaleBar(canvas, size, scale);
+    _drawScaleBar(labels, canvas, size, scale);
   }
 
-  void _drawTitle(Canvas canvas, Size size, String title, double scale) {
-    _label(canvas, title, const Offset(10, 6), 12, bold: true, color: const Color(0xFF263238));
-    _label(canvas, 'SCALE 1" = ${(1 / (scale * 12)).toStringAsFixed(2)}\'',
+  void _drawTitle(LabelPlacer labels, Canvas canvas, Size size, String title, double scale) {
+    labels.draw(canvas, title, const Offset(10, 6), 12, bold: true, color: const Color(0xFF263238));
+    labels.draw(canvas, 'SCALE 1" = ${(1 / (scale * 12)).toStringAsFixed(2)}\'',
         Offset(size.width - 10, 6), 9,
-        alignRight: true, color: const Color(0xFF607D8B));
+        align: LabelAnchor.right, color: const Color(0xFF607D8B));
   }
 
-  void _drawScaleBar(Canvas canvas, Size size, double scale) {
+  void _drawScaleBar(LabelPlacer labels, Canvas canvas, Size size, double scale) {
     final barLen = 12 * scale; // one foot
     final y0 = size.height - 16;
     final x0 = 12.0;
@@ -180,13 +182,16 @@ class ElevationPainter extends CustomPainter {
     canvas.drawLine(Offset(x0, y0), Offset(x0 + barLen, y0), paint);
     canvas.drawLine(Offset(x0, y0 - 4), Offset(x0, y0 + 4), paint);
     canvas.drawLine(Offset(x0 + barLen, y0 - 4), Offset(x0 + barLen, y0 + 4), paint);
-    _label(canvas, "1'-0\"", Offset(x0 + barLen + 6, y0 - 6), 8.5, color: const Color(0xFF455A64));
+    labels.draw(canvas, "1'-0\"", Offset(x0 + barLen + 6, y0 - 6), 8.5,
+        color: const Color(0xFF455A64), avoidOverlap: false);
   }
 
-  void _referenceLine(Canvas canvas, double yy, double x0, double x1, String text) {
+  void _referenceLine(
+      LabelPlacer labels, Canvas canvas, double yy, double x0, double x1, String text) {
     final paint = _stroke(const Color(0xFF455A64), 1.0);
     _dashedLine(canvas, Offset(x0, yy), Offset(x1, yy), paint);
-    _label(canvas, text, Offset(x1 + 2, yy - 10), 9, alignRight: true, color: const Color(0xFF263238));
+    labels.draw(canvas, text, Offset(x1 + 2, yy - 10), 9,
+        align: LabelAnchor.right, color: const Color(0xFF263238));
   }
 
   void _dashedLine(Canvas canvas, Offset a, Offset b, Paint paint) {
@@ -201,30 +206,6 @@ class ElevationPainter extends CustomPainter {
       canvas.drawLine(a + dir * travelled, a + dir * end, paint);
       travelled = end + gap;
     }
-  }
-
-  void _label(
-    Canvas canvas,
-    String text,
-    Offset at,
-    double fontSize, {
-    bool alignRight = false,
-    bool bold = false,
-    Color color = Colors.black,
-  }) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontSize: fontSize,
-          color: color,
-          fontWeight: bold ? FontWeight.bold : FontWeight.w500,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: alignRight ? TextAlign.right : TextAlign.left,
-    )..layout();
-    painter.paint(canvas, alignRight ? Offset(at.dx - painter.width, at.dy) : at);
   }
 
   Paint _stroke(Color color, double width) => Paint()
