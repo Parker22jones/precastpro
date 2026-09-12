@@ -84,6 +84,7 @@ class AppState extends ChangeNotifier {
   final List<StockNotification> _notifications = [];
   int _activeIndex = 0;
   String _activeJobId = '';
+  bool _jobOpen = false;
 
   List<StructureRecord> get structures => List.unmodifiable(_structures);
   List<Job> get jobs => List.unmodifiable(_jobs);
@@ -98,6 +99,35 @@ class AppState extends ChangeNotifier {
   StructureRecord get activeStructure => _structures[_activeIndex];
 
   Job get activeJob => jobById(_activeJobId) ?? _jobs.first;
+
+  /// True once a job has been explicitly opened from the job browser. Until
+  /// then the application shows nothing but the job list, and while it is set
+  /// every view is scoped to [activeJob].
+  bool get isJobOpen => _jobOpen;
+
+  /// Structures belonging to the open job - the only ones any job-scoped
+  /// screen is allowed to show.
+  List<StructureRecord> get activeJobStructures => structuresForJob(_activeJobId);
+
+  /// Enters a job's database: selects it, lands on its first structure and
+  /// unlocks the job-scoped screens.
+  void openJob(String jobId) {
+    if (jobById(jobId) == null) return;
+    if (jobId != _activeJobId) {
+      _activeJobId = jobId;
+      final structures = alphabeticalStructures(jobId);
+      if (structures.isNotEmpty) _activeIndex = _structures.indexOf(structures.first);
+    }
+    _jobOpen = true;
+    notifyListeners();
+  }
+
+  /// Leaves the job database and returns to the job browser.
+  void closeJob() {
+    if (!_jobOpen) return;
+    _jobOpen = false;
+    notifyListeners();
+  }
 
   Job? jobById(String id) {
     for (final job in _jobs) {
@@ -152,11 +182,13 @@ class AppState extends ChangeNotifier {
     setPriorityOrder(ordered);
   }
 
-  /// Every structure scheduled to be poured on [day], across all jobs, most
-  /// urgent first.
-  List<StructureRecord> castingLineFor(DateTime day) {
+  /// Every structure scheduled to be poured on [day], most urgent first.
+  /// Pass [jobId] to keep the line inside one job's database.
+  List<StructureRecord> castingLineFor(DateTime day, {String? jobId}) {
     final date = DateTime(day.year, day.month, day.day);
-    final list = _structures.where((s) => s.pourDate == date).toList();
+    final list = _structures
+        .where((s) => s.pourDate == date && (jobId == null || s.jobId == jobId))
+        .toList();
     list.sort((a, b) {
       final pa = a.design.priority == 0 ? 1 << 20 : a.design.priority;
       final pb = b.design.priority == 0 ? 1 << 20 : b.design.priority;
@@ -165,14 +197,14 @@ class AppState extends ChangeNotifier {
     return list;
   }
 
-  /// Concrete scheduled for [day] across every job, in pounds.
-  double concreteWeightLbsFor(DateTime day) =>
-      castingLineFor(day).fold(0.0, (sum, r) => sum + r.concreteWeightLbs);
+  /// Concrete scheduled for [day], in pounds.
+  double concreteWeightLbsFor(DateTime day, {String? jobId}) =>
+      castingLineFor(day, jobId: jobId).fold(0.0, (sum, r) => sum + r.concreteWeightLbs);
 
-  /// Concrete scheduled for [day] across every job, in cubic yards - what the
-  /// plant manager books against the batch plant.
-  double pourVolumeCuYdFor(DateTime day) =>
-      concreteWeightLbsFor(day) / (kConcreteDensityPcf * 27.0);
+  /// Concrete scheduled for [day], in cubic yards - what the plant manager
+  /// books against the batch plant.
+  double pourVolumeCuYdFor(DateTime day, {String? jobId}) =>
+      concreteWeightLbsFor(day, jobId: jobId) / (kConcreteDensityPcf * 27.0);
 
   /// Yardage the plant can batch in one shift.
   static const double dailyPourCapacityCuYd = 40.0;
@@ -190,8 +222,10 @@ class AppState extends ChangeNotifier {
   double get tomorrowPourVolumeCuYd => pourVolumeCuYdFor(tomorrow);
 
   /// Unpoured structures ranked by priority, for drafting into a run.
-  List<StructureRecord> unpouredBacklog() {
-    final list = _structures.where((s) => !s.isPoured).toList();
+  List<StructureRecord> unpouredBacklog({String? jobId}) {
+    final list = _structures
+        .where((s) => !s.isPoured && (jobId == null || s.jobId == jobId))
+        .toList();
     list.sort((a, b) {
       final pa = a.design.priority == 0 ? 1 << 20 : a.design.priority;
       final pb = b.design.priority == 0 ? 1 << 20 : b.design.priority;
@@ -246,6 +280,7 @@ class AppState extends ChangeNotifier {
     );
     _jobs.add(job);
     _activeJobId = job.id;
+    _jobOpen = true;
     notifyListeners();
     return job;
   }

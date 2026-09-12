@@ -22,7 +22,17 @@ class _LogisticsPageState extends State<LogisticsPage> {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final structures = app.structures;
+    // Scoped to the open job: yard work for other projects is only reachable
+    // by opening that job.
+    final structures = app.activeJobStructures;
+    if (structures.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('No structures in this job yet.', style: Mh.label),
+        ),
+      );
+    }
     final index = _selected.clamp(0, structures.length - 1);
     final record = structures[index];
 

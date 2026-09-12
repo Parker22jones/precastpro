@@ -23,6 +23,7 @@ class CalendarPage extends StatefulWidget {
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _selected = _today();
   late DateTime _month = DateTime(_selected.year, _selected.month);
+  bool _allJobs = false;
 
   static DateTime _today() {
     final now = DateTime.now();
@@ -32,8 +33,14 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
+    // The open job's run by default; plant managers widen it to the whole
+    // plant explicitly.
+    final jobId = _allJobs ? null : app.activeJob.id;
     final calendar = _MonthGrid(
       app: app,
+      jobId: jobId,
+      scopeLabel: _allJobs ? 'ALL JOBS' : app.activeJob.name,
+      onToggleScope: () => setState(() => _allJobs = !_allJobs),
       month: _month,
       selected: _selected,
       onSelect: (day) => setState(() => _selected = day),
@@ -51,10 +58,11 @@ class _CalendarPageState extends State<CalendarPage> {
     );
     final line = _CastingLine(
       app: app,
+      jobId: jobId,
       day: _selected,
       onOpenStructure: widget.onOpenStructure,
     );
-    final backlog = _Backlog(app: app, day: _selected);
+    final backlog = _Backlog(app: app, jobId: jobId, day: _selected);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -112,6 +120,9 @@ const List<String> _monthNames = [
 class _MonthGrid extends StatelessWidget {
   const _MonthGrid({
     required this.app,
+    required this.jobId,
+    required this.scopeLabel,
+    required this.onToggleScope,
     required this.month,
     required this.selected,
     required this.onSelect,
@@ -121,6 +132,9 @@ class _MonthGrid extends StatelessWidget {
   });
 
   final AppState app;
+  final String? jobId;
+  final String scopeLabel;
+  final VoidCallback onToggleScope;
   final DateTime month;
   final DateTime selected;
   final ValueChanged<DateTime> onSelect;
@@ -140,7 +154,7 @@ class _MonthGrid extends StatelessWidget {
     }
     for (var d = 1; d <= daysInMonth; d++) {
       final day = DateTime(month.year, month.month, d);
-      final scheduled = app.castingLineFor(day).length;
+      final scheduled = app.castingLineFor(day, jobId: jobId).length;
       final isSelected = day == selected;
       cells.add(
         InkWell(
@@ -224,6 +238,19 @@ class _MonthGrid extends StatelessWidget {
                 onPressed: onTomorrow,
                 child: const Text("TOMORROW"),
               ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton(
+                  key: const Key('btn-cal-scope'),
+                  onPressed: onToggleScope,
+                  child: Text(
+                    scopeLabel.toUpperCase(),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -252,17 +279,23 @@ class _MonthGrid extends StatelessWidget {
 }
 
 class _CastingLine extends StatelessWidget {
-  const _CastingLine({required this.app, required this.day, required this.onOpenStructure});
+  const _CastingLine({
+    required this.app,
+    required this.jobId,
+    required this.day,
+    required this.onOpenStructure,
+  });
 
   final AppState app;
+  final String? jobId;
   final DateTime day;
   final VoidCallback onOpenStructure;
 
   @override
   Widget build(BuildContext context) {
-    final scheduled = app.castingLineFor(day);
-    final concreteLbs = app.concreteWeightLbsFor(day);
-    final cuYd = app.pourVolumeCuYdFor(day);
+    final scheduled = app.castingLineFor(day, jobId: jobId);
+    final concreteLbs = app.concreteWeightLbsFor(day, jobId: jobId);
+    final cuYd = app.pourVolumeCuYdFor(day, jobId: jobId);
     final over = app.isOverPourCapacity(day);
 
     return SpecPanel(
@@ -362,14 +395,18 @@ class _CastingLine extends StatelessWidget {
 
 /// Unpoured work ranked by priority, draftable into the selected day's run.
 class _Backlog extends StatelessWidget {
-  const _Backlog({required this.app, required this.day});
+  const _Backlog({required this.app, required this.jobId, required this.day});
 
   final AppState app;
+  final String? jobId;
   final DateTime day;
 
   @override
   Widget build(BuildContext context) {
-    final backlog = app.unpouredBacklog().where((r) => r.pourDate != day).toList();
+    final backlog = app
+        .unpouredBacklog(jobId: jobId)
+        .where((r) => r.pourDate != day)
+        .toList();
 
     return SpecPanel(
       title: 'Unpoured Backlog - top priorities',

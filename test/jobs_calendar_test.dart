@@ -17,10 +17,16 @@ import 'package:precastpro/ui/calendar_page.dart';
 import 'package:precastpro/ui/drawings_panel.dart';
 import 'package:precastpro/ui/jobs_page.dart';
 
-Future<void> pumpAt(WidgetTester tester, Size size, AppState state) async {
+Future<void> pumpAt(
+  WidgetTester tester,
+  Size size,
+  AppState state, {
+  bool openJob = true,
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  if (openJob) state.openJob(state.activeJob.id);
   await tester.pumpWidget(PrecastProApp(state: state));
   await tester.pumpAndSettle();
 }
@@ -318,35 +324,58 @@ void main() {
   });
 
   group('jobs and calendar screens', () {
-    testWidgets('jobs screen searches, lists A-Z and opens a structure', (tester) async {
+    testWidgets('the app opens on the job browser and hides structure data', (tester) async {
       final app = AppState();
-      await pumpAt(tester, const Size(1600, 1100), app);
-      await openModule(tester, Module.jobs);
+      await pumpAt(tester, const Size(1600, 1100), app, openJob: false);
 
       expect(find.byType(JobsPage), findsOneWidget);
       expect(find.byKey(const Key('job-row-job-northgate')), findsOneWidget);
+      // No wizard, no structures, no other job's data until a job is opened.
+      expect(find.byKey(const Key('field-structure-mark')), findsNothing);
+      expect(find.byKey(const Key('nav-phase1')), findsNothing);
 
       await tester.enterText(find.byKey(const Key('field-job-search')), 'Weston');
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('job-row-job-riverbend')), findsNothing);
       expect(find.byKey(const Key('job-row-job-northgate')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('job-row-job-northgate')));
+      await tester.tap(find.byKey(const Key('btn-open-job-job-northgate')));
       await tester.pumpAndSettle();
+      expect(app.isJobOpen, isTrue);
       expect(app.activeJob.id, 'job-northgate');
 
-      await tester.tap(find.byKey(const Key('alpha-CB-2')).first);
+      // The sidebar tree lists only this job's structures.
+      expect(find.byKey(const Key('tree-CB-2')), findsOneWidget);
+      expect(find.byKey(const Key('tree-MH-1')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('tree-CB-2')));
       await tester.pumpAndSettle();
       expect(app.design.structureMark, 'CB-2');
-      // Selecting a structure jumps into the wizard.
       expect(find.byKey(const Key('field-structure-mark')), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('flow tree selection loads the structure too', (tester) async {
+    testWidgets('closing a job returns to the browser', (tester) async {
       final app = AppState();
       await pumpAt(tester, const Size(1600, 1100), app);
+
+      await tester.tap(find.byKey(const Key('btn-close-job')));
+      await tester.pumpAndSettle();
+      expect(app.isJobOpen, isFalse);
+      expect(find.byType(JobsPage), findsOneWidget);
+      expect(find.byKey(const Key('nav-phase1')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('job overview lists A-Z and flow order for the open job', (tester) async {
+      final app = AppState();
+      app.openJob('job-riverbend');
+      await pumpAt(tester, const Size(1600, 1100), app);
       await openModule(tester, Module.jobs);
+
+      expect(find.byType(JobOverviewPage), findsOneWidget);
+      expect(find.byKey(const Key('alpha-MH-1')), findsOneWidget);
+      expect(find.byKey(const Key('alpha-CB-1')), findsNothing);
 
       await tester.tap(find.byKey(const Key('flow-MH-3')).first);
       await tester.pumpAndSettle();
@@ -365,7 +394,9 @@ void main() {
 
       final tomorrow = DateTime.now().add(const Duration(days: 1));
       final day = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
-      final target = app.unpouredBacklog().firstWhere((r) => r.pourDate != day);
+      final target = app
+          .unpouredBacklog(jobId: app.activeJob.id)
+          .firstWhere((r) => r.pourDate != day);
 
       await tester.ensureVisible(find.byKey(Key('draft-${target.mark}')).first);
       await tester.pumpAndSettle();
@@ -378,9 +409,14 @@ void main() {
     });
 
     testWidgets('jobs and calendar stay clean at iPhone width', (tester) async {
-      await pumpAt(tester, const Size(390, 844), AppState());
-      await openModule(tester, Module.jobs, wide: false);
+      await pumpAt(tester, const Size(390, 844), AppState(), openJob: false);
       expect(find.byType(JobsPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const Key('btn-open-job-job-riverbend')));
+      await tester.pumpAndSettle();
+      await openModule(tester, Module.jobs, wide: false);
+      expect(find.byType(JobOverviewPage), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await openModule(tester, Module.calendar, wide: false);

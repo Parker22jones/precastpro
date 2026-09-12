@@ -19,6 +19,8 @@ Future<void> pumpAt(WidgetTester tester, Size size, AppState state) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  // The shell opens on the job browser; these cases exercise an open job.
+  state.openJob(state.activeJob.id);
   await tester.pumpWidget(PrecastProApp(state: state));
   await tester.pumpAndSettle();
 }

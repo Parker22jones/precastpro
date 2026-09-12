@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../logic/flow_tree.dart';
 import '../state/app_state.dart';
 import 'app_scope.dart';
 import 'calendar_page.dart';
@@ -21,7 +22,7 @@ const double kWideLayoutBreakpoint = 900;
 /// Sidebar destinations: the five engineering phases plus the operations
 /// modules that share the same store.
 enum Module {
-  jobs('', 'Jobs', Icons.account_tree_outlined),
+  jobs('', 'Job Overview', Icons.account_tree_outlined),
   phase1('1', 'Job Info & Spec', Icons.description_outlined),
   phase2('2', 'Elevations & Sizing', Icons.straighten),
   phase3('3', 'Pipe Schedule', Icons.grid_on),
@@ -100,6 +101,26 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
 
+    // Nothing but the job browser until a job is explicitly opened - no
+    // other job's structures, drawings or takeoffs are reachable from here.
+    if (!app.isJobOpen) {
+      return Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 38,
+          backgroundColor: Mh.chrome,
+          foregroundColor: Colors.white,
+          titleSpacing: 8,
+          title: const Text(
+            'PRECASTPRO  /  SELECT A JOB',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+        ),
+        body: SafeArea(
+          child: JobsPage(onOpenJob: () => setState(() => _module = Module.jobs)),
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= kWideLayoutBreakpoint;
@@ -122,6 +143,14 @@ class _AppShellState extends State<AppShell> {
                       Navigator.of(context).pop();
                       setState(() => _module = m);
                     },
+                    onOpenStructure: () {
+                      Navigator.of(context).pop();
+                      setState(() => _module = Module.phase1);
+                    },
+                    onCloseJob: () {
+                      Navigator.of(context).pop();
+                      _closeJob(app);
+                    },
                   ),
                 ),
           body: SafeArea(
@@ -134,6 +163,8 @@ class _AppShellState extends State<AppShell> {
                         child: _Sidebar(
                           module: _module,
                           onSelect: (m) => setState(() => _module = m),
+                          onOpenStructure: () => setState(() => _module = Module.phase1),
+                          onCloseJob: () => _closeJob(app),
                         ),
                       ),
                       const VerticalDivider(width: 1),
@@ -147,9 +178,16 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  void _closeJob(AppState app) {
+    app.closeJob();
+    setState(() => _module = Module.phase1);
+  }
+
   Widget _content(AppState app, bool wide) {
     final page = switch (_module) {
-      Module.jobs => JobsPage(onOpenStructure: () => setState(() => _module = Module.phase1)),
+      Module.jobs => JobOverviewPage(
+        onOpenStructure: () => setState(() => _module = Module.phase1),
+      ),
       Module.calendar => CalendarPage(
         onOpenStructure: () => setState(() => _module = Module.phase1),
       ),
@@ -269,15 +307,32 @@ class _PhaseNav extends StatelessWidget {
   }
 }
 
-class _Sidebar extends StatelessWidget {
-  const _Sidebar({required this.module, required this.onSelect});
+class _Sidebar extends StatefulWidget {
+  const _Sidebar({
+    required this.module,
+    required this.onSelect,
+    required this.onOpenStructure,
+    required this.onCloseJob,
+  });
 
   final Module module;
   final ValueChanged<Module> onSelect;
+  final VoidCallback onOpenStructure;
+  final VoidCallback onCloseJob;
+
+  @override
+  State<_Sidebar> createState() => _SidebarState();
+}
+
+class _SidebarState extends State<_Sidebar> {
+  bool _flowView = false;
 
   @override
   Widget build(BuildContext context) {
+    final module = widget.module;
+    final onSelect = widget.onSelect;
     final app = AppScope.of(context);
+    final job = app.activeJob;
     final phases = Module.values.where((m) => m.isPhase).toList();
     final ops = Module.values.where((m) => !m.isPhase && m != Module.jobs).toList();
     final lowCount = app.lowStockItems.length;
@@ -289,27 +344,52 @@ class _Sidebar extends StatelessWidget {
         children: [
           Container(
             color: Mh.chromeLight,
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.fromLTRB(10, 8, 6, 6),
+            child: Row(
               children: [
-                const Text(
-                  'PRECASTPRO',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        job.name.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${job.number} / ${app.design.structureMark}',
+                        style: const TextStyle(color: Color(0xFF9FB4C8), fontSize: 10.5),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  '${app.design.jobName} / ${app.design.structureMark}',
-                  style: const TextStyle(color: Color(0xFF9FB4C8), fontSize: 10.5),
+                IconButton(
+                  key: const Key('btn-close-job'),
+                  tooltip: 'Close job',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: widget.onCloseJob,
+                  icon: const Icon(Icons.logout, size: 16, color: Color(0xFFB8C6D4)),
                 ),
               ],
             ),
           ),
-          const _SidebarHeading('Projects'),
+          _StructureNav(
+            app: app,
+            flowView: _flowView,
+            onToggleView: () => setState(() => _flowView = !_flowView),
+            onOpen: (record) {
+              app.selectStructureRecord(record);
+              widget.onOpenStructure();
+            },
+          ),
           _SidebarTile(
             module: Module.jobs,
             selected: module == Module.jobs,
@@ -333,6 +413,116 @@ class _Sidebar extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// The open job's structures in the sidebar, A-Z or in drainage flow order -
+/// MH Pro!'s job tree, and the only structure list in the application.
+class _StructureNav extends StatelessWidget {
+  const _StructureNav({
+    required this.app,
+    required this.flowView,
+    required this.onToggleView,
+    required this.onOpen,
+  });
+
+  final AppState app;
+  final bool flowView;
+  final VoidCallback onToggleView;
+  final ValueChanged<StructureRecord> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final jobId = app.activeJob.id;
+    final rows = <Widget>[];
+
+    void addRow(StructureRecord record, int depth) {
+      final selected = identical(record, app.activeStructure);
+      rows.add(
+        InkWell(
+          key: Key('tree-${record.mark}'),
+          onTap: () => onOpen(record),
+          child: Container(
+            height: 26,
+            padding: EdgeInsets.fromLTRB(12.0 + depth * 12, 0, 8, 0),
+            alignment: Alignment.centerLeft,
+            color: selected ? Mh.accent : Colors.transparent,
+            child: Text(
+              record.mark,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                color: selected ? Colors.white : const Color(0xFFD4DEE7),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      );
+    }
+
+    void addNode(FlowNode<StructureRecord> node, int depth) {
+      addRow(node.value, depth);
+      for (final child in node.children) {
+        addNode(child, depth + 1);
+      }
+    }
+
+    if (flowView) {
+      for (final node in app.flowTree(jobId)) {
+        addNode(node, 0);
+      }
+    } else {
+      for (final record in app.alphabeticalStructures(jobId)) {
+        addRow(record, 0);
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 6, 2),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  flowView ? 'FLOW ORDER' : 'STRUCTURES A-Z',
+                  style: const TextStyle(
+                    color: Color(0xFF7D93A6),
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ),
+              InkWell(
+                key: const Key('btn-tree-view'),
+                onTap: onToggleView,
+                child: Text(
+                  flowView ? 'A-Z' : 'FLOW',
+                  style: const TextStyle(
+                    color: Color(0xFF9FD0F5),
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (rows.isEmpty)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 2, 8, 4),
+            child: Text(
+              'No structures in this job.',
+              style: TextStyle(color: Color(0xFF7D93A6), fontSize: 10.5),
+            ),
+          ),
+        ...rows,
+      ],
     );
   }
 }
@@ -466,7 +656,9 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
       foregroundColor: Colors.white,
       titleSpacing: 8,
       title: Text(
-        compact ? module.title : '${app.design.jobName}  /  ${app.design.structureMark}',
+        compact
+            ? '${app.design.structureMark}  /  ${module.title}'
+            : '${app.activeJob.name}  /  ${app.design.structureMark}',
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
         overflow: TextOverflow.ellipsis,
       ),
