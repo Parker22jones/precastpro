@@ -83,6 +83,22 @@ class ElevationPainter extends CustomPainter {
       color: palette.callout,
     );
 
+    // Reserve the pipe openings first so piece, seam and datum callouts drawn
+    // later are nudged clear of them.
+    for (final pipe in pipes) {
+      final onRight = pipe.normalizedAngleDeg < 180;
+      final wallX = x(onRight ? layout.outsideDiameterIn / 2 : -layout.outsideDiameterIn / 2);
+      final outX = wallX + (onRight ? 34.0 : -34.0);
+      labels.reserve(
+        Rect.fromLTRB(
+          math.min(wallX, outX),
+          y(pipe.invertElevationFt + pipe.outsideDiameterIn / 12),
+          math.max(wallX, outX),
+          y(pipe.invertElevationFt),
+        ).inflate(5),
+      );
+    }
+
     // Stacked pieces.
     for (final laid in layout.pieces) {
       final p = laid.piece;
@@ -178,6 +194,7 @@ class ElevationPainter extends CustomPainter {
           Offset(x(halfOut) + 8, (top + bottom) / 2 - 5),
           8.5,
           color: palette.callout,
+          maxWidth: 120,
         );
       }
     }
@@ -339,14 +356,7 @@ class ElevationPainter extends CustomPainter {
   ) {
     final paint = _stroke(palette.thinInk, 1.0);
     _dashDot(canvas, Offset(x0, yy), Offset(x1, yy), paint);
-    labels.draw(
-      canvas,
-      text,
-      Offset(x1 + 2, yy - 10),
-      9,
-      align: LabelAnchor.right,
-      color: palette.callout,
-    );
+    labels.draw(canvas, text, Offset(x1 + 4, yy - 10), 9, color: palette.callout, maxWidth: 104);
   }
 
   void _dashedLine(Canvas canvas, Offset a, Offset b, Paint paint) {
