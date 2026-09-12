@@ -142,6 +142,20 @@ void main() {
       expect(app.notifications, isEmpty);
     });
 
+    test('manually issuing stock below the minimum also raises a reminder', () {
+      final app = singleStructure();
+      final item = app.itemForSku('LID-24')!;
+      app.setThreshold(item, 5);
+      app.receiveStock(item, -item.onHand + 6);
+      app.markNotificationsRead();
+      expect(item.isLowStock, isFalse);
+
+      app.receiveStock(item, -1);
+
+      expect(item.isLowStock, isTrue);
+      expect(app.unreadNotifications.single.sku, 'LID-24');
+    });
+
     test('unknown skus never throw', () {
       final app = singleStructure();
       final record = app.activeStructure;

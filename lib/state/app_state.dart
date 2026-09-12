@@ -162,7 +162,9 @@ class AppState extends ChangeNotifier {
   void receiveStock(InventoryItem item, int quantity) {
     item.onHand += quantity;
     if (item.onHand < 0) item.onHand = 0;
-    if (!item.isLowStock) {
+    if (item.isLowStock) {
+      _checkLowStock(item);
+    } else {
       _notifications.removeWhere((n) => n.sku == item.sku);
     }
     notifyListeners();
