@@ -10,24 +10,20 @@ import 'inventory_page.dart';
 import 'jobs_page.dart';
 import 'logistics_page.dart';
 import 'mh_theme.dart';
-import 'phases/phase_elevations.dart';
 import 'phases/phase_job_info.dart';
-import 'phases/phase_pipe_schedule.dart';
-import 'phases/phase_structural.dart';
+import 'phases/phase_structure_editor.dart';
 import 'phases/phase_takeoff.dart';
 
 /// Width at or above which the desktop side-by-side layout is used.
 const double kWideLayoutBreakpoint = 900;
 
-/// Sidebar destinations: the five engineering phases plus the operations
-/// modules that share the same store.
+/// Sidebar destinations: the engineering phases plus the operations modules
+/// that share the same store.
 enum Module {
   jobs('', 'Job Overview', Icons.account_tree_outlined),
   phase1('1', 'Job Info & Spec', Icons.description_outlined),
-  phase2('2', 'Elevations & Sizing', Icons.straighten),
-  phase3('3', 'Pipe Schedule', Icons.grid_on),
-  phase4('4', 'Structural Details', Icons.settings_input_component),
-  phase5('5', 'Takeoff & Production', Icons.fact_check_outlined),
+  structure('2', 'Structure Editor', Icons.tune),
+  phase5('3', 'Takeoff & Production', Icons.fact_check_outlined),
   calendar('', 'Production Calendar', Icons.calendar_month_outlined),
   logistics('', 'Logistics Dashboard', Icons.local_shipping_outlined),
   inventory('', 'Inventory Management', Icons.inventory_2_outlined);
@@ -145,7 +141,7 @@ class _AppShellState extends State<AppShell> {
                     },
                     onOpenStructure: () {
                       Navigator.of(context).pop();
-                      setState(() => _module = Module.phase1);
+                      setState(() => _module = Module.structure);
                     },
                     onCloseJob: () {
                       Navigator.of(context).pop();
@@ -163,7 +159,7 @@ class _AppShellState extends State<AppShell> {
                         child: _Sidebar(
                           module: _module,
                           onSelect: (m) => setState(() => _module = m),
-                          onOpenStructure: () => setState(() => _module = Module.phase1),
+                          onOpenStructure: () => setState(() => _module = Module.structure),
                           onCloseJob: () => _closeJob(app),
                         ),
                       ),
@@ -186,15 +182,13 @@ class _AppShellState extends State<AppShell> {
   Widget _content(AppState app, bool wide) {
     final page = switch (_module) {
       Module.jobs => JobOverviewPage(
-        onOpenStructure: () => setState(() => _module = Module.phase1),
+        onOpenStructure: () => setState(() => _module = Module.structure),
       ),
       Module.calendar => CalendarPage(
-        onOpenStructure: () => setState(() => _module = Module.phase1),
+        onOpenStructure: () => setState(() => _module = Module.structure),
       ),
       Module.phase1 => const PhaseJobInfo(),
-      Module.phase2 => const PhaseElevations(),
-      Module.phase3 => const PhasePipeSchedule(),
-      Module.phase4 => const PhaseStructural(),
+      Module.structure => const PhaseStructureEditor(),
       Module.phase5 => const PhaseTakeoff(),
       Module.logistics => const LogisticsPage(),
       Module.inventory => const InventoryPage(),

@@ -64,13 +64,38 @@ void main() {
     expect(isWideLayout(390), isFalse);
   });
 
-  testWidgets('phase navigation walks all five phases', (tester) async {
+  testWidgets('phase navigation walks every phase', (tester) async {
     await pumpAt(tester, const Size(1600, 1200), AppState());
 
-    for (final phase in [Module.phase2, Module.phase3, Module.phase4, Module.phase5]) {
+    for (final phase in [Module.structure, Module.phase5]) {
       await tester.tap(find.byKey(const Key('btn-phase-next')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('PHASE ${phase.step} OF 5'), findsOneWidget);
+      expect(find.textContaining('PHASE ${phase.step} OF 3'), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the structure editor holds sizing, elevations, castings and openings', (
+    tester,
+  ) async {
+    final design = DesignState();
+    await pumpAt(tester, const Size(1600, 1200), stateWith(design));
+    await openModule(tester, Module.structure);
+
+    for (final key in const [
+      'field-structure-mark',
+      'field-shape',
+      'field-rim',
+      'field-sump',
+      'field-casting',
+      'field-steps',
+      'pipe-0-angle',
+      'pipe-0-hole',
+      'pipe-0-boot',
+      'pipe-0-delete',
+      'btn-add-pipe',
+    ]) {
+      expect(find.byKey(Key(key)), findsOneWidget, reason: 'missing $key');
     }
     expect(tester.takeException(), isNull);
   });
@@ -83,7 +108,7 @@ void main() {
     expect(rings, greaterThan(0));
 
     await pumpAt(tester, const Size(1600, 1200), stateWith(design));
-    await openModule(tester, Module.phase4);
+    await openModule(tester, Module.structure);
 
     expect(find.textContaining('$rings ring(s)'), findsOneWidget);
   });
@@ -101,7 +126,7 @@ void main() {
 
   testWidgets('clear design shows the spatial pass banner', (tester) async {
     await pumpAt(tester, const Size(1600, 1200), AppState());
-    await openModule(tester, Module.phase3);
+    await openModule(tester, Module.structure);
 
     expect(find.textContaining('SPATIAL CHECK PASSED'), findsOneWidget);
   });
@@ -124,7 +149,7 @@ void main() {
       ],
     );
     await pumpAt(tester, const Size(1600, 1200), stateWith(design));
-    await openModule(tester, Module.phase3);
+    await openModule(tester, Module.structure);
 
     expect(find.textContaining('PENETRATION CONFLICT'), findsOneWidget);
   });
@@ -132,7 +157,7 @@ void main() {
   testWidgets('editing the rim elevation recalculates the stack', (tester) async {
     final design = DesignState();
     await pumpAt(tester, const Size(1600, 1200), stateWith(design));
-    await openModule(tester, Module.phase2);
+    await openModule(tester, Module.structure);
 
     final before = design.stack.totalWeightLbs;
     await tester.enterText(find.byKey(const Key('field-rim')), '112.0');
@@ -146,7 +171,7 @@ void main() {
   testWidgets('adding and removing pipes updates the design', (tester) async {
     final design = DesignState();
     await pumpAt(tester, const Size(1600, 1200), stateWith(design));
-    await openModule(tester, Module.phase3);
+    await openModule(tester, Module.structure);
 
     final initial = design.pipes.length;
     await tester.tap(find.byKey(const Key('btn-add-pipe')));

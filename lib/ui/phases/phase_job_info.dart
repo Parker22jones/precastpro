@@ -15,11 +15,7 @@ class PhaseJobInfo extends StatelessWidget {
     final app = AppScope.of(context);
     final design = app.design;
     final job = app.activeJob;
-    final siblings = app
-        .alphabeticalStructures(design.jobId)
-        .map((s) => s.mark)
-        .where((m) => m != design.structureMark)
-        .toList();
+    final structures = app.alphabeticalStructures(job.id);
 
     return ListView(
       padding: const EdgeInsets.all(Mh.gap),
@@ -52,14 +48,6 @@ class PhaseJobInfo extends StatelessWidget {
               ),
             ),
             SpecRow(
-              label: 'Structure Name',
-              child: DenseField(
-                key: const Key('field-structure-mark'),
-                value: design.structureMark,
-                onChanged: (v) => design.structureMark = v,
-              ),
-            ),
-            SpecRow(
               label: 'Customer',
               child: DenseField(
                 key: const Key('field-customer'),
@@ -67,71 +55,40 @@ class PhaseJobInfo extends StatelessWidget {
                 onChanged: (v) => design.customer = v,
               ),
             ),
-            SpecRow(
-              label: 'Structure Type',
-              child: DenseDropdown<StructureType>(
-                value: design.structureType,
-                items: StructureType.values,
-                labelOf: (t) => t.label,
-                onChanged: (t) => design.structureType = t,
-              ),
-            ),
-            SpecRow(
-              label: 'Cast Date',
-              child: _CastDateCell(app: app),
-            ),
-            SpecRow(
-              label: 'Flows Into',
-              child: DenseDropdown<String>(
-                value: design.downstreamMark ?? '',
-                items: ['', ...siblings],
-                labelOf: (m) => m.isEmpty ? 'None (outfall)' : m,
-                onChanged: (m) => design.downstreamMark = m,
-              ),
-            ),
-            SpecRow(
-              label: 'Shop Priority',
-              child: DenseField(
-                key: const Key('field-priority'),
-                value: '${design.priority}',
-                numeric: true,
-                onChanged: (v) {
-                  final rank = int.tryParse(v.trim());
-                  if (rank != null) design.priority = rank;
-                },
-              ),
-            ),
           ],
         ),
         SpecPanel(
-          title: 'Active Structures',
+          title: 'Structures in this Job',
           trailing: TextButton(
             onPressed: app.addStructure,
             child: const Text('+ NEW STRUCTURE', style: TextStyle(color: Colors.white)),
           ),
           children: [
             const GridHeaderRow(
-              columns: [('Mark', 2), ('Job', 4), ('Customer', 3), ('Type', 3), ('', 3)],
+              columns: [('Mark', 3), ('Type', 4), ('Flows Into', 3), ('Cast', 3), ('', 3)],
             ),
-            for (var i = 0; i < app.structures.length; i++)
+            for (var i = 0; i < structures.length; i++)
               GridRow(
                 striped: i.isOdd,
-                highlight: i == app.activeIndex ? const Color(0xFFDDEBFA) : null,
+                highlight: identical(structures[i], app.activeStructure)
+                    ? const Color(0xFFDDEBFA)
+                    : null,
                 cells: [
-                  (Text(app.structures[i].mark, style: Mh.cell), 2),
-                  (Text(app.structures[i].jobName, style: Mh.cell), 4),
-                  (Text(app.structures[i].design.customer, style: Mh.cell), 3),
-                  (Text(app.structures[i].design.structureType.label, style: Mh.cell), 3),
+                  (Text(structures[i].mark, style: Mh.cell), 3),
+                  (Text(structures[i].design.structureType.label, style: Mh.cell), 4),
+                  (Text(structures[i].design.downstreamMark ?? '-', style: Mh.cell), 3),
+                  (Text(_date(structures[i].design.castDate), style: Mh.cellNum), 3),
                   (
-                    i == app.activeIndex
+                    identical(structures[i], app.activeStructure)
                         ? const StatusChip(label: 'Open', color: Mh.accent)
                         : TextButton(
+                            key: Key('open-structure-${structures[i].mark}'),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
                               minimumSize: const Size(0, 22),
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            onPressed: () => app.selectStructure(i),
+                            onPressed: () => app.selectStructureRecord(structures[i]),
                             child: const Text('OPEN', maxLines: 1, softWrap: false),
                           ),
                     3,
@@ -145,18 +102,18 @@ class PhaseJobInfo extends StatelessWidget {
   }
 }
 
-class _CastDateCell extends StatelessWidget {
-  const _CastDateCell({required this.app});
+String _date(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  final AppState app;
+/// Cast date entry with a picker - shared by the job and structure screens.
+class CastDateCell extends StatelessWidget {
+  const CastDateCell({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final AppState app = AppScope.of(context);
     final design = app.design;
-    final d = design.castDate;
-    final text =
-        '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-        '${d.day.toString().padLeft(2, '0')}';
+    final text = _date(design.castDate);
     return Row(
       children: [
         Expanded(
