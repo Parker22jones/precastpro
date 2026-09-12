@@ -26,36 +26,37 @@ class DesignState extends ChangeNotifier {
     double maxGradeRingStackIn = 12.0,
     int stepCount = 6,
     List<PipePenetration>? pipes,
-  })  : _jobName = jobName,
-        _structureMark = structureMark,
-        _customer = customer,
-        _structureType = structureType,
-        _castDate = castDate ?? DateTime(2026, 1, 15),
-        _rimElevationFt = rimElevationFt,
-        _invertElevationFt = invertElevationFt,
-        _sumpDepthIn = sumpDepthIn,
-        _structureDiameterIn = structureDiameterIn,
-        _conicalTop = conicalTop,
-        _defaultBoot = defaultBoot,
-        _maxGradeRingStackIn = maxGradeRingStackIn,
-        _stepCount = stepCount,
-        _pipes = pipes ??
-            [
-              PipePenetration(
-                name: 'IN-A',
-                outsideDiameterIn: 14.4,
-                invertElevationFt: 89.0,
-                horizontalAngleDeg: 0,
-                material: PipeMaterial.pvc,
-              ),
-              PipePenetration(
-                name: 'OUT',
-                outsideDiameterIn: 18.0,
-                invertElevationFt: 88.5,
-                horizontalAngleDeg: 180,
-                material: PipeMaterial.rcp,
-              ),
-            ];
+  }) : _jobName = jobName,
+       _structureMark = structureMark,
+       _customer = customer,
+       _structureType = structureType,
+       _castDate = castDate ?? DateTime(2026, 1, 15),
+       _rimElevationFt = rimElevationFt,
+       _invertElevationFt = invertElevationFt,
+       _sumpDepthIn = sumpDepthIn,
+       _structureDiameterIn = structureDiameterIn,
+       _conicalTop = conicalTop,
+       _defaultBoot = defaultBoot,
+       _maxGradeRingStackIn = maxGradeRingStackIn,
+       _stepCount = stepCount,
+       _pipes =
+           pipes ??
+           [
+             PipePenetration(
+               name: 'IN-A',
+               outsideDiameterIn: 14.4,
+               invertElevationFt: 89.0,
+               horizontalAngleDeg: 0,
+               material: PipeMaterial.pvc,
+             ),
+             PipePenetration(
+               name: 'OUT',
+               outsideDiameterIn: 18.0,
+               invertElevationFt: 88.5,
+               horizontalAngleDeg: 180,
+               material: PipeMaterial.rcp,
+             ),
+           ];
 
   String _jobName;
   String _structureMark;
@@ -182,34 +183,34 @@ class DesignState extends ChangeNotifier {
   }
 
   StackResult get stack => const StackCalculator().calculate(
-        rimElevationFt: _rimElevationFt,
-        invertElevationFt: _invertElevationFt,
-        structureDiameterIn: _structureDiameterIn,
-        conicalTop: _conicalTop,
-        sumpDepthIn: _sumpDepthIn,
-        maxGradeRingStackIn: _maxGradeRingStackIn,
-      );
+    rimElevationFt: _rimElevationFt,
+    invertElevationFt: _invertElevationFt,
+    structureDiameterIn: _structureDiameterIn,
+    conicalTop: _conicalTop,
+    sumpDepthIn: _sumpDepthIn,
+    maxGradeRingStackIn: _maxGradeRingStackIn,
+  );
 
   StructureLayout get layout => StructureLayout(
-        stack: stack,
-        rimElevationFt: _rimElevationFt,
-        invertElevationFt: _invertElevationFt,
-        structureDiameterIn: _structureDiameterIn,
-        sumpDepthIn: _sumpDepthIn,
-      );
+    stack: stack,
+    rimElevationFt: _rimElevationFt,
+    invertElevationFt: _invertElevationFt,
+    structureDiameterIn: _structureDiameterIn,
+    sumpDepthIn: _sumpDepthIn,
+  );
 
   ValidationReport get validation => const PipeValidator().validate(
-        pipes: _pipes,
-        structureInsideDiameterIn: _structureDiameterIn,
-        wallThicknessIn: PieceCatalog.base(_structureDiameterIn).wallThicknessIn,
-        rimElevationFt: _rimElevationFt,
-        invertElevationFt: _invertElevationFt,
-      );
+    pipes: _pipes,
+    structureInsideDiameterIn: _structureDiameterIn,
+    wallThicknessIn: PieceCatalog.base(_structureDiameterIn).wallThicknessIn,
+    rimElevationFt: _rimElevationFt,
+    invertElevationFt: _invertElevationFt,
+  );
 
   /// Names of pipes involved in at least one conflict.
   Set<String> get conflictedPipeNames => {
-        for (final c in validation.conflicts) ...[c.pipeA, c.pipeB],
-      };
+    for (final c in validation.conflicts) ...[c.pipeA, c.pipeB],
+  };
 
   double get totalWeightLbs => stack.totalWeightLbs;
 
@@ -222,46 +223,54 @@ class DesignState extends ChangeNotifier {
 
     for (final item in stack.items) {
       for (var i = 0; i < item.count; i++) {
-        out.add(StructureComponent(
-          id: nextId(),
-          pieceId: item.piece.id,
-          description: item.piece.description,
-          weightLbs: item.piece.weightLbs,
-          stockSku: _skuForPiece(item.piece),
-        ));
+        out.add(
+          StructureComponent(
+            id: nextId(),
+            pieceId: item.piece.id,
+            description: item.piece.description,
+            weightLbs: item.piece.weightLbs,
+            stockSku: _skuForPiece(item.piece),
+          ),
+        );
       }
     }
-    out.add(StructureComponent(
-      id: nextId(),
-      pieceId: 'LID-24',
-      description: '24" Iron Frame & Lid',
-      weightLbs: 320,
-      stockSku: 'LID-24',
-    ));
-    for (final pipe in _pipes) {
-      out.add(StructureComponent(
+    out.add(
+      StructureComponent(
         id: nextId(),
-        pieceId: pipe.boot.sku,
-        description: '${pipe.boot.label} boot - ${pipe.name}',
-        weightLbs: 12,
-        stockSku: pipe.boot.sku,
-      ));
+        pieceId: 'LID-24',
+        description: '24" Iron Frame & Lid',
+        weightLbs: 320,
+        stockSku: 'LID-24',
+      ),
+    );
+    for (final pipe in _pipes) {
+      out.add(
+        StructureComponent(
+          id: nextId(),
+          pieceId: pipe.boot.sku,
+          description: '${pipe.boot.label} boot - ${pipe.name}',
+          weightLbs: 12,
+          stockSku: pipe.boot.sku,
+        ),
+      );
     }
     for (var i = 0; i < _stepCount; i++) {
-      out.add(StructureComponent(
-        id: nextId(),
-        pieceId: 'STEP-MA',
-        description: 'Manhole step',
-        weightLbs: 3,
-        stockSku: 'STEP-MA',
-      ));
+      out.add(
+        StructureComponent(
+          id: nextId(),
+          pieceId: 'STEP-MA',
+          description: 'Manhole step',
+          weightLbs: 3,
+          stockSku: 'STEP-MA',
+        ),
+      );
     }
     return out;
   }
 
   static String _skuForPiece(PrecastPiece piece) => switch (piece.type) {
-        PieceType.riser => 'R${piece.insideDiameterIn.toStringAsFixed(0)}',
-        PieceType.gradeRing => 'GR',
-        _ => piece.id,
-      };
+    PieceType.riser => 'R${piece.insideDiameterIn.toStringAsFixed(0)}',
+    PieceType.gradeRing => 'GR',
+    _ => piece.id,
+  };
 }

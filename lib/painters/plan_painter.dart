@@ -34,7 +34,7 @@ class PlanPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2 + 8);
     final outsideRadiusIn = insideDiameterIn / 2 + wallThicknessIn;
-    final available = math.min(size.width, size.height) / 2 - 70;
+    final available = math.min(size.width, size.height) / 2 - 86;
     final scale = math.max(available, 20.0) / (outsideRadiusIn + 14);
 
     double r(double inches) => inches * scale;
@@ -46,13 +46,14 @@ class PlanPainter extends CustomPainter {
     canvas.drawLine(const Offset(3, 22), Offset(size.width - 3, 22), _stroke(palette.thinInk, 0.8));
     labels.draw(canvas, title, const Offset(9, 6), 11.5, bold: true, color: palette.ink);
     labels.draw(
-        canvas,
-        '${insideDiameterIn.toStringAsFixed(0)}" I.D. x '
-        '${wallThicknessIn.toStringAsFixed(0)}" WALL',
-        Offset(size.width - 9, 6),
-        9,
-        align: LabelAnchor.right,
-        color: palette.thinInk);
+      canvas,
+      '${insideDiameterIn.toStringAsFixed(0)}" I.D. x '
+      '${wallThicknessIn.toStringAsFixed(0)}" WALL',
+      Offset(size.width - 9, 6),
+      9,
+      align: LabelAnchor.right,
+      color: palette.thinInk,
+    );
 
     // Wall annulus.
     canvas.drawCircle(center, r(outsideRadiusIn), Paint()..color = palette.concrete);
@@ -62,17 +63,33 @@ class PlanPainter extends CustomPainter {
 
     // Centre cross-hairs (CAD centre mark).
     final crossPaint = _stroke(palette.thinInk, 0.8);
-    canvas.drawLine(center - Offset(r(outsideRadiusIn) + 8, 0),
-        center + Offset(r(outsideRadiusIn) + 8, 0), crossPaint);
-    canvas.drawLine(center - Offset(0, r(outsideRadiusIn) + 8),
-        center + Offset(0, r(outsideRadiusIn) + 8), crossPaint);
+    canvas.drawLine(
+      center - Offset(r(outsideRadiusIn) + 8, 0),
+      center + Offset(r(outsideRadiusIn) + 8, 0),
+      crossPaint,
+    );
+    canvas.drawLine(
+      center - Offset(0, r(outsideRadiusIn) + 8),
+      center + Offset(0, r(outsideRadiusIn) + 8),
+      crossPaint,
+    );
 
     // Inside-diameter dimension string across the barrel.
-    drawDimensionLine(canvas, center - Offset(r(insideDiameterIn / 2), 0),
-        center + Offset(r(insideDiameterIn / 2), 0), palette.dimension);
-    labels.draw(canvas, '\u00D8 ${insideDiameterIn.toStringAsFixed(0)}" I.D.',
-        Offset(center.dx, center.dy + 4), 9,
-        align: LabelAnchor.center, color: palette.dimension, avoidOverlap: false);
+    drawDimensionLine(
+      canvas,
+      center - Offset(r(insideDiameterIn / 2), 0),
+      center + Offset(r(insideDiameterIn / 2), 0),
+      palette.dimension,
+    );
+    labels.draw(
+      canvas,
+      '\u00D8 ${insideDiameterIn.toStringAsFixed(0)}" I.D.',
+      Offset(center.dx, center.dy + 4),
+      9,
+      align: LabelAnchor.center,
+      color: palette.dimension,
+      avoidOverlap: false,
+    );
 
     // Clock ticks every 30 degrees.
     for (var a = 0; a < 360; a += 30) {
@@ -80,16 +97,31 @@ class PlanPainter extends CustomPainter {
       final p2 = pt(a.toDouble(), outsideRadiusIn + 5);
       canvas.drawLine(p1, p2, _stroke(palette.thinInk, 1));
       final labelPt = pt(a.toDouble(), outsideRadiusIn + 12);
-      labels.draw(canvas, '$a\u00B0', labelPt - const Offset(0, 5), 7.5,
-          align: LabelAnchor.center, color: palette.thinInk, avoidOverlap: false);
+      labels.draw(
+        canvas,
+        '$a\u00B0',
+        labelPt - const Offset(0, 5),
+        7.5,
+        align: LabelAnchor.center,
+        color: palette.thinInk,
+        avoidOverlap: false,
+      );
     }
 
     // North arrow at the 0 degree heading.
     final nTip = pt(0, outsideRadiusIn + 28);
     final nTail = pt(0, outsideRadiusIn + 8);
     drawLeader(canvas, nTail, nTip, palette.ink);
-    labels.draw(canvas, 'N  0\u00B0', nTip - const Offset(0, 18), 10.5,
-        align: LabelAnchor.center, bold: true, color: palette.ink);
+    labels.reserve(LabelPlacer.corridor(nTail, nTip, pad: 5));
+    labels.draw(
+      canvas,
+      'N  0\u00B0',
+      nTip - const Offset(0, 18),
+      10.5,
+      align: LabelAnchor.center,
+      bold: true,
+      color: palette.ink,
+    );
 
     // Pipe penetrations.
     for (final pipe in pipes) {
@@ -100,20 +132,31 @@ class PlanPainter extends CustomPainter {
 
       // Cored opening through the wall.
       final opening = Path()
-        ..moveTo(pt(angle - halfAngleDeg, insideDiameterIn / 2).dx,
-            pt(angle - halfAngleDeg, insideDiameterIn / 2).dy)
-        ..lineTo(pt(angle - halfAngleDeg, outsideRadiusIn + 18).dx,
-            pt(angle - halfAngleDeg, outsideRadiusIn + 18).dy)
-        ..lineTo(pt(angle + halfAngleDeg, outsideRadiusIn + 18).dx,
-            pt(angle + halfAngleDeg, outsideRadiusIn + 18).dy)
-        ..lineTo(pt(angle + halfAngleDeg, insideDiameterIn / 2).dx,
-            pt(angle + halfAngleDeg, insideDiameterIn / 2).dy)
+        ..moveTo(
+          pt(angle - halfAngleDeg, insideDiameterIn / 2).dx,
+          pt(angle - halfAngleDeg, insideDiameterIn / 2).dy,
+        )
+        ..lineTo(
+          pt(angle - halfAngleDeg, outsideRadiusIn + 18).dx,
+          pt(angle - halfAngleDeg, outsideRadiusIn + 18).dy,
+        )
+        ..lineTo(
+          pt(angle + halfAngleDeg, outsideRadiusIn + 18).dx,
+          pt(angle + halfAngleDeg, outsideRadiusIn + 18).dy,
+        )
+        ..lineTo(
+          pt(angle + halfAngleDeg, insideDiameterIn / 2).dx,
+          pt(angle + halfAngleDeg, insideDiameterIn / 2).dy,
+        )
         ..close();
       canvas.drawPath(opening, Paint()..color = color.withValues(alpha: conflicted ? 0.30 : 0.14));
       canvas.drawPath(opening, _stroke(color, 1.6));
 
       // Radial centreline out from the structure centre.
       canvas.drawLine(center, pt(angle, outsideRadiusIn + 18), _stroke(color, 1.0));
+      labels.reserve(
+        LabelPlacer.corridor(pt(angle, outsideRadiusIn), pt(angle, outsideRadiusIn + 18), pad: 2),
+      );
 
       // Angular callout: arc from North to the pipe heading.
       _angleArc(canvas, center, r(outsideRadiusIn) * 0.55, angle, palette.dimension);
@@ -124,8 +167,8 @@ class PlanPainter extends CustomPainter {
       final align = dx.abs() < r(outsideRadiusIn) * 0.35
           ? LabelAnchor.center
           : dx < 0
-              ? LabelAnchor.right
-              : LabelAnchor.left;
+          ? LabelAnchor.right
+          : LabelAnchor.left;
       labels.draw(
         canvas,
         '${pipe.name}  ${pipe.material.label}\n'
@@ -140,8 +183,14 @@ class PlanPainter extends CustomPainter {
     }
 
     if (conflictedPipes.isNotEmpty) {
-      labels.draw(canvas, '!! PENETRATION CONFLICT', Offset(10, size.height - 20), 11,
-          bold: true, color: palette.conflict);
+      labels.draw(
+        canvas,
+        '!! PENETRATION CONFLICT',
+        Offset(10, size.height - 20),
+        11,
+        bold: true,
+        color: palette.conflict,
+      );
     }
   }
 
@@ -152,7 +201,10 @@ class PlanPainter extends CustomPainter {
     final sweep = angleDeg * math.pi / 180.0;
     canvas.drawArc(rect, -math.pi / 2, sweep, false, _stroke(color, 0.9));
     final end = polar(center, radius, angleDeg);
-    final tangent = Offset(math.cos((angleDeg) * math.pi / 180.0), math.sin(angleDeg * math.pi / 180.0));
+    final tangent = Offset(
+      math.cos((angleDeg) * math.pi / 180.0),
+      math.sin(angleDeg * math.pi / 180.0),
+    );
     drawLeader(canvas, end - tangent * 6, end, color);
   }
 

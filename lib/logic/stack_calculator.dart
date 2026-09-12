@@ -56,8 +56,7 @@ class StackCalculator {
     required double rimElevationFt,
     required double invertElevationFt,
     double sumpDepthIn = 0,
-  }) =>
-      (rimElevationFt - invertElevationFt) * 12.0 + sumpDepthIn - kBaseFloorThicknessIn;
+  }) => (rimElevationFt - invertElevationFt) * 12.0 + sumpDepthIn - kBaseFloorThicknessIn;
 
   /// Builds the stack that reaches [rimElevationFt] exactly while using the
   /// fewest possible pieces (and therefore the fewest horizontal joints).
@@ -82,7 +81,9 @@ class StackCalculator {
         structuralDepthIn: depth,
         achievedHeightIn: 0,
         residualIn: depth,
-        messages: const ['Rim elevation must be above the invert elevation by more than the 8" base floor.'],
+        messages: const [
+          'Rim elevation must be above the invert elevation by more than the 8" base floor.',
+        ],
         feasible: false,
       );
     }
@@ -97,7 +98,10 @@ class StackCalculator {
         '${fixedHeight.toStringAsFixed(1)}" required for a ${base.description} with a ${top.description}.',
       );
       return StackResult(
-        items: [StackItem(piece: base, count: 1), StackItem(piece: top, count: 1)],
+        items: [
+          StackItem(piece: base, count: 1),
+          StackItem(piece: top, count: 1),
+        ],
         structuralDepthIn: depth,
         achievedHeightIn: fixedHeight,
         residualIn: depth - fixedHeight,

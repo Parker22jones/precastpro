@@ -6,10 +6,7 @@ void main() {
   const calc = StackCalculator();
 
   test('structural depth is rim minus invert minus the 8 inch base floor', () {
-    expect(
-      StackCalculator.structuralDepthIn(rimElevationFt: 100, invertElevationFt: 90),
-      120 - 8,
-    );
+    expect(StackCalculator.structuralDepthIn(rimElevationFt: 100, invertElevationFt: 90), 120 - 8);
   });
 
   test('stack reaches the rim exactly and totals the structural depth', () {

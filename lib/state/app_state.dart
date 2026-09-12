@@ -18,8 +18,7 @@ class StructureRecord {
   String get jobName => design.jobName;
   double get totalWeightLbs => components.fold(0.0, (s, c) => s + c.weightLbs);
 
-  int countWithStatus(ComponentStatus status) =>
-      components.where((c) => c.status == status).length;
+  int countWithStatus(ComponentStatus status) => components.where((c) => c.status == status).length;
 
   /// Furthest-behind component status, i.e. what the structure as a whole is
   /// waiting on.
@@ -42,8 +41,8 @@ class StockNotification {
 /// reactive link between them.
 class AppState extends ChangeNotifier {
   AppState({List<StructureRecord>? structures, List<InventoryItem>? inventory})
-      : _inventory = inventory ?? defaultInventory(),
-        _structures = structures ?? [] {
+    : _inventory = inventory ?? defaultInventory(),
+      _structures = structures ?? [] {
     if (_structures.isEmpty) _seed();
     for (final record in _structures) {
       record.design.addListener(notifyListeners);
@@ -117,7 +116,11 @@ class AppState extends ChangeNotifier {
 
   /// Advances (or rolls back) one component. Crossing into "Shipped" consumes
   /// the matching stock item; rolling back out of "Shipped" returns it.
-  void setComponentStatus(StructureRecord record, StructureComponent component, ComponentStatus status) {
+  void setComponentStatus(
+    StructureRecord record,
+    StructureComponent component,
+    ComponentStatus status,
+  ) {
     final was = component.status;
     if (was == status) return;
     component.status = status;
@@ -194,12 +197,15 @@ class AppState extends ChangeNotifier {
   void _checkLowStock(InventoryItem item) {
     if (!item.isLowStock) return;
     if (_notifications.any((n) => n.sku == item.sku && !n.read)) return;
-    _notifications.add(StockNotification(
-      sku: item.sku,
-      message: '${item.description} is at ${item.onHand} on hand '
-          '(minimum ${item.minThreshold}). Reorder ${item.shortfall} or more.',
-      raisedAt: DateTime.now(),
-    ));
+    _notifications.add(
+      StockNotification(
+        sku: item.sku,
+        message:
+            '${item.description} is at ${item.onHand} on hand '
+            '(minimum ${item.minThreshold}). Reorder ${item.shortfall} or more.',
+        raisedAt: DateTime.now(),
+      ),
+    );
   }
 
   void _seed() {
@@ -222,17 +228,19 @@ class AppState extends ChangeNotifier {
       conicalTop: false,
       pipes: [
         PipePenetration(
-            name: 'IN-A',
-            outsideDiameterIn: 18,
-            invertElevationFt: 90.0,
-            horizontalAngleDeg: 45,
-            material: PipeMaterial.rcp),
+          name: 'IN-A',
+          outsideDiameterIn: 18,
+          invertElevationFt: 90.0,
+          horizontalAngleDeg: 45,
+          material: PipeMaterial.rcp,
+        ),
         PipePenetration(
-            name: 'OUT',
-            outsideDiameterIn: 24,
-            invertElevationFt: 89.0,
-            horizontalAngleDeg: 225,
-            material: PipeMaterial.rcp),
+          name: 'OUT',
+          outsideDiameterIn: 24,
+          invertElevationFt: 89.0,
+          horizontalAngleDeg: 225,
+          material: PipeMaterial.rcp,
+        ),
       ],
     );
     final cb1 = DesignState(
@@ -246,11 +254,12 @@ class AppState extends ChangeNotifier {
       conicalTop: false,
       pipes: [
         PipePenetration(
-            name: 'OUT',
-            outsideDiameterIn: 15,
-            invertElevationFt: 90.0,
-            horizontalAngleDeg: 270,
-            material: PipeMaterial.hdpe),
+          name: 'OUT',
+          outsideDiameterIn: 15,
+          invertElevationFt: 90.0,
+          horizontalAngleDeg: 270,
+          material: PipeMaterial.hdpe,
+        ),
       ],
     );
 
@@ -264,8 +273,8 @@ class AppState extends ChangeNotifier {
       first[i].status = i < 3
           ? ComponentStatus.inYard
           : i < 6
-              ? ComponentStatus.manufactured
-              : ComponentStatus.pendingPour;
+          ? ComponentStatus.manufactured
+          : ComponentStatus.pendingPour;
     }
   }
 }

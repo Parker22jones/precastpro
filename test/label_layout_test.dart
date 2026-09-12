@@ -45,8 +45,11 @@ void main() {
 
     for (var i = 0; i < canvas.painted.length; i++) {
       for (var j = i + 1; j < canvas.painted.length; j++) {
-        expect(canvas.painted[i].overlaps(canvas.painted[j]), isFalse,
-            reason: 'labels $i and $j overlap');
+        expect(
+          canvas.painted[i].overlaps(canvas.painted[j]),
+          isFalse,
+          reason: 'labels $i and $j overlap',
+        );
       }
     }
   });

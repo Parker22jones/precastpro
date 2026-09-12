@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:precastpro/main.dart';
 import 'package:precastpro/models/component_status.dart';
 import 'package:precastpro/models/pipe_penetration.dart';
+import 'package:precastpro/models/precast_piece.dart';
 import 'package:precastpro/state/app_state.dart';
 import 'package:precastpro/state/design_state.dart';
 import 'package:precastpro/ui/app_shell.dart';
@@ -11,8 +12,8 @@ import 'package:precastpro/ui/inventory_page.dart';
 import 'package:precastpro/ui/logistics_page.dart';
 
 AppState stateWith(DesignState design) => AppState(
-      structures: [StructureRecord(design: design, components: design.buildComponents())],
-    );
+  structures: [StructureRecord(design: design, components: design.buildComponents())],
+);
 
 Future<void> pumpAt(WidgetTester tester, Size size, AppState state) async {
   tester.view.physicalSize = size;
@@ -72,6 +73,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('structural details report the grade rings the stack actually uses',
+      (tester) async {
+    final design = DesignState(rimElevationFt: 101, invertElevationFt: 88, sumpDepthIn: 6);
+    final rings = design.stack.items
+        .where((i) => i.piece.type == PieceType.gradeRing)
+        .fold<int>(0, (sum, i) => sum + i.count);
+    expect(rings, greaterThan(0));
+
+    await pumpAt(tester, const Size(1600, 1200), stateWith(design));
+    await openModule(tester, Module.phase4);
+
+    expect(find.textContaining('$rings ring(s)'), findsOneWidget);
+  });
+
+  testWidgets('logistics lists every component row at iPhone width', (tester) async {
+    final state = AppState();
+    await pumpAt(tester, const Size(390, 844), state);
+    await openModule(tester, Module.logistics, wide: false);
+
+    final firstComponent = state.structures.first.components.first;
+    expect(find.text(firstComponent.id), findsOneWidget);
+    expect(find.byKey(const Key('ship-toggle-0')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('clear design shows the spatial pass banner', (tester) async {
     await pumpAt(tester, const Size(1600, 1200), AppState());
     await openModule(tester, Module.phase3);
@@ -80,10 +106,22 @@ void main() {
   });
 
   testWidgets('conflicting pipes raise the bright warning banner', (tester) async {
-    final design = DesignState(pipes: [
-      PipePenetration(name: 'A', outsideDiameterIn: 18, invertElevationFt: 89, horizontalAngleDeg: 0),
-      PipePenetration(name: 'B', outsideDiameterIn: 18, invertElevationFt: 89, horizontalAngleDeg: 8),
-    ]);
+    final design = DesignState(
+      pipes: [
+        PipePenetration(
+          name: 'A',
+          outsideDiameterIn: 18,
+          invertElevationFt: 89,
+          horizontalAngleDeg: 0,
+        ),
+        PipePenetration(
+          name: 'B',
+          outsideDiameterIn: 18,
+          invertElevationFt: 89,
+          horizontalAngleDeg: 8,
+        ),
+      ],
+    );
     await pumpAt(tester, const Size(1600, 1200), stateWith(design));
     await openModule(tester, Module.phase3);
 

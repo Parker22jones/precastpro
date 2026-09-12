@@ -77,8 +77,10 @@ class _AppShellState extends State<AppShell> {
           key: const Key('low-stock-snackbar'),
           backgroundColor: Mh.warn,
           duration: const Duration(seconds: 6),
-          content: Text('LOW STOCK: ${latest.message}',
-              style: const TextStyle(color: Color(0xFF3A2A00), fontWeight: FontWeight.w700)),
+          content: Text(
+            'LOW STOCK: ${latest.message}',
+            style: const TextStyle(color: Color(0xFF3A2A00), fontWeight: FontWeight.w700),
+          ),
           action: SnackBarAction(
             label: 'INVENTORY',
             textColor: const Color(0xFF3A2A00),
@@ -94,43 +96,51 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final wide = constraints.maxWidth >= kWideLayoutBreakpoint;
-      final content = _content(app, wide);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= kWideLayoutBreakpoint;
+        final content = _content(app, wide);
 
-      return Scaffold(
-        appBar: _TopBar(
-          app: app,
-          module: _module,
-          compact: !wide,
-          onOpenInventory: () => setState(() => _module = Module.inventory),
-        ),
-        drawer: wide
-            ? null
-            : Drawer(
-                width: 258,
-                child: _Sidebar(
-                  module: _module,
-                  onSelect: (m) {
-                    Navigator.of(context).pop();
-                    setState(() => _module = m);
-                  },
-                ),
-              ),
-        body: SafeArea(
-          child: wide
-              ? Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  SizedBox(
-                    width: 228,
-                    child: _Sidebar(module: _module, onSelect: (m) => setState(() => _module = m)),
+        return Scaffold(
+          appBar: _TopBar(
+            app: app,
+            module: _module,
+            compact: !wide,
+            onOpenInventory: () => setState(() => _module = Module.inventory),
+          ),
+          drawer: wide
+              ? null
+              : Drawer(
+                  width: 258,
+                  child: _Sidebar(
+                    module: _module,
+                    onSelect: (m) {
+                      Navigator.of(context).pop();
+                      setState(() => _module = m);
+                    },
                   ),
-                  const VerticalDivider(width: 1),
-                  Expanded(child: content),
-                ])
-              : content,
-        ),
-      );
-    });
+                ),
+          body: SafeArea(
+            child: wide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: 228,
+                        child: _Sidebar(
+                          module: _module,
+                          onSelect: (m) => setState(() => _module = m),
+                        ),
+                      ),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: content),
+                    ],
+                  )
+                : content,
+          ),
+        );
+      },
+    );
   }
 
   Widget _content(AppState app, bool wide) {
@@ -149,44 +159,61 @@ class _AppShellState extends State<AppShell> {
     final drawings = DrawingsPanel(design: app.design, stacked: !wide);
 
     if (wide) {
-      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Expanded(flex: 5, child: Column(children: [Expanded(child: page), _PhaseNav(
-          module: _module,
-          onSelect: (m) => setState(() => _module = m),
-        )])),
-        const VerticalDivider(width: 1),
-        Expanded(flex: 4, child: drawings),
-      ]);
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 5,
+            child: Column(
+              children: [
+                Expanded(child: page),
+                _PhaseNav(module: _module, onSelect: (m) => setState(() => _module = m)),
+              ],
+            ),
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(flex: 4, child: drawings),
+        ],
+      );
     }
 
     // Narrow: data and drawings as swipeable tabs.
     return DefaultTabController(
       length: 2,
-      child: Column(children: [
-        const ColoredBox(
-          color: Mh.chromeLight,
-          child: SizedBox(
-            width: double.infinity,
-            height: 34,
-            child: TabBar(
-              labelColor: Colors.white,
-              unselectedLabelColor: Color(0xFFB8C6D4),
-              indicatorColor: Colors.white,
-              labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-              tabs: [Tab(text: 'DATA'), Tab(text: 'DRAWINGS')],
+      child: Column(
+        children: [
+          const ColoredBox(
+            color: Mh.chromeLight,
+            child: SizedBox(
+              width: double.infinity,
+              height: 34,
+              child: TabBar(
+                labelColor: Colors.white,
+                unselectedLabelColor: Color(0xFFB8C6D4),
+                indicatorColor: Colors.white,
+                labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                tabs: [
+                  Tab(text: 'DATA'),
+                  Tab(text: 'DRAWINGS'),
+                ],
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: TabBarView(children: [
-            Column(children: [
-              Expanded(child: page),
-              _PhaseNav(module: _module, onSelect: (m) => setState(() => _module = m)),
-            ]),
-            drawings,
-          ]),
-        ),
-      ]),
+          Expanded(
+            child: TabBarView(
+              children: [
+                Column(
+                  children: [
+                    Expanded(child: page),
+                    _PhaseNav(module: _module, onSelect: (m) => setState(() => _module = m)),
+                  ],
+                ),
+                drawings,
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -209,23 +236,27 @@ class _PhaseNav extends StatelessWidget {
         border: Border(top: BorderSide(color: Mh.gridLine)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Row(children: [
-        OutlinedButton(
-          key: const Key('btn-phase-back'),
-          onPressed: index <= 0 ? null : () => onSelect(phases[index - 1]),
-          child: const Text('< BACK'),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text('PHASE ${module.step} OF ${phases.length} - ${module.title.toUpperCase()}',
-              style: Mh.header),
-        ),
-        FilledButton(
-          key: const Key('btn-phase-next'),
-          onPressed: index >= phases.length - 1 ? null : () => onSelect(phases[index + 1]),
-          child: const Text('NEXT >'),
-        ),
-      ]),
+      child: Row(
+        children: [
+          OutlinedButton(
+            key: const Key('btn-phase-back'),
+            onPressed: index <= 0 ? null : () => onSelect(phases[index - 1]),
+            child: const Text('< BACK'),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'PHASE ${module.step} OF ${phases.length} - ${module.title.toUpperCase()}',
+              style: Mh.header,
+            ),
+          ),
+          FilledButton(
+            key: const Key('btn-phase-next'),
+            onPressed: index >= phases.length - 1 ? null : () => onSelect(phases[index + 1]),
+            child: const Text('NEXT >'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -251,16 +282,24 @@ class _Sidebar extends StatelessWidget {
           Container(
             color: Mh.chromeLight,
             padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('PRECASTPRO',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'PRECASTPRO',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2)),
-              Text('${app.design.jobName} / ${app.design.structureMark}',
-                  style: const TextStyle(color: Color(0xFF9FB4C8), fontSize: 10.5)),
-            ]),
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                Text(
+                  '${app.design.jobName} / ${app.design.structureMark}',
+                  style: const TextStyle(color: Color(0xFF9FB4C8), fontSize: 10.5),
+                ),
+              ],
+            ),
           ),
           const _SidebarHeading('Engineering Wizard'),
           for (final m in phases)
@@ -293,12 +332,15 @@ class _SidebarHeading extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 4),
-      child: Text(text.toUpperCase(),
-          style: const TextStyle(
-              color: Color(0xFF7D93A6),
-              fontSize: 9.5,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.0)),
+      child: Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          color: Color(0xFF7D93A6),
+          fontSize: 9.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.0,
+        ),
+      ),
     );
   }
 }
@@ -330,41 +372,54 @@ class _SidebarTile extends StatelessWidget {
           color: selected ? Mh.accent : Colors.transparent,
           border: const Border(bottom: BorderSide(color: Color(0xFF223243))),
         ),
-        child: Row(children: [
-          if (leadingText != null)
-            Container(
-              width: 17,
-              height: 17,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: selected ? Colors.white : const Color(0xFF35485E),
-                shape: BoxShape.rectangle,
-              ),
-              child: Text(leadingText!,
+        child: Row(
+          children: [
+            if (leadingText != null)
+              Container(
+                width: 17,
+                height: 17,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected ? Colors.white : const Color(0xFF35485E),
+                  shape: BoxShape.rectangle,
+                ),
+                child: Text(
+                  leadingText!,
                   style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: selected ? Mh.accent : Colors.white)),
-            )
-          else
-            Icon(module.icon, size: 16, color: selected ? Colors.white : const Color(0xFFB8C6D4)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(module.title,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: selected ? Mh.accent : Colors.white,
+                  ),
+                ),
+              )
+            else
+              Icon(module.icon, size: 16, color: selected ? Colors.white : const Color(0xFFB8C6D4)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                module.title,
                 style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? Colors.white : const Color(0xFFD4DEE7))),
-          ),
-          if (badge != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              color: Mh.warn,
-              child: Text(badge!,
-                  style: const TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF3A2A00))),
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? Colors.white : const Color(0xFFD4DEE7),
+                ),
+              ),
             ),
-        ]),
+            if (badge != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                color: Mh.warn,
+                child: Text(
+                  badge!,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF3A2A00),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -412,9 +467,14 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                 color: Mh.warn,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 alignment: Alignment.center,
-                child: Text('LOW STOCK ALERT (${low.length})',
-                    style: const TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF3A2A00))),
+                child: Text(
+                  'LOW STOCK ALERT (${low.length})',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF3A2A00),
+                  ),
+                ),
               ),
             ),
           ),
@@ -448,11 +508,14 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                     for (final n in app.notifications.reversed)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Icon(Icons.warning_amber_rounded, size: 16, color: Mh.warn),
-                          const SizedBox(width: 6),
-                          Expanded(child: Text(n.message, style: Mh.cell)),
-                        ]),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, size: 16, color: Mh.warn),
+                            const SizedBox(width: 6),
+                            Expanded(child: Text(n.message, style: Mh.cell)),
+                          ],
+                        ),
                       ),
                   ],
                 ),

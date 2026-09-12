@@ -71,12 +71,17 @@ class PhaseElevations extends StatelessWidget {
             ),
             SpecRow(
               label: 'Wall Thickness',
-              child: Text('${design.layout.wallThicknessIn.toStringAsFixed(0)}"', style: Mh.cellNum),
+              child: Text(
+                '${design.layout.wallThicknessIn.toStringAsFixed(0)}"',
+                style: Mh.cellNum,
+              ),
             ),
             SpecRow(
               label: 'Outside Diameter',
-              child:
-                  Text('${design.layout.outsideDiameterIn.toStringAsFixed(0)}"', style: Mh.cellNum),
+              child: Text(
+                '${design.layout.outsideDiameterIn.toStringAsFixed(0)}"',
+                style: Mh.cellNum,
+              ),
             ),
           ],
         ),
@@ -85,8 +90,10 @@ class PhaseElevations extends StatelessWidget {
           children: [
             SpecRow(
               label: 'Structural Depth',
-              child: Text('${stack.structuralDepthIn.toStringAsFixed(2)}"  '
-                  '(rim - invert + sump - 8" floor)'),
+              child: Text(
+                '${stack.structuralDepthIn.toStringAsFixed(2)}"  '
+                '(rim - invert + sump - 8" floor)',
+              ),
             ),
             SpecRow(
               label: 'Stack Height',
@@ -103,7 +110,8 @@ class PhaseElevations extends StatelessWidget {
                   : StatusChip(
                       label: '${stack.residualIn.toStringAsFixed(2)}" adjustment',
                       color: Mh.warn,
-                      dense: false),
+                      dense: false,
+                    ),
             ),
             for (final message in stack.messages)
               SpecRow(

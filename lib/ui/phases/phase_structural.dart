@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/job_spec.dart';
+import '../../models/precast_piece.dart';
 import '../app_scope.dart';
 import '../mh_theme.dart';
 import '../widgets/dense.dart';
@@ -12,9 +13,14 @@ class PhaseStructural extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final design = AppScope.of(context).design;
-    final gradeRings = design.stack.items
-        .where((i) => i.piece.id == 'GR')
-        .fold<int>(0, (sum, i) => sum + i.count);
+    final gradeRingItems = design.stack.items
+        .where((i) => i.piece.type == PieceType.gradeRing)
+        .toList();
+    final gradeRings = gradeRingItems.fold<int>(0, (sum, i) => sum + i.count);
+    final gradeRingHeight = gradeRingItems.fold<double>(
+      0,
+      (sum, i) => sum + i.piece.heightIn * i.count,
+    );
 
     return ListView(
       padding: const EdgeInsets.all(Mh.gap),
@@ -45,7 +51,10 @@ class PhaseStructural extends StatelessWidget {
             ),
             SpecRow(
               label: 'Grade Rings Used',
-              child: Text('$gradeRings ring(s)', style: Mh.cellNum),
+              child: Text(
+                '$gradeRings ring(s) - ${gradeRingHeight.toStringAsFixed(0)}"',
+                style: Mh.cellNum,
+              ),
             ),
             SpecRow(
               label: 'Steps',
@@ -65,39 +74,51 @@ class PhaseStructural extends StatelessWidget {
           title: 'Boot / Connector Schedule',
           trailing: _DefaultBootPicker(),
           children: [
-            const GridHeaderRow(columns: [
-              ('Pipe', 3),
-              ('O.D.', 2),
-              ('Hole', 2),
-              ('Boot Type', 5),
-              ('Stock SKU', 3),
-            ]),
-            for (var i = 0; i < design.pipes.length; i++)
-              GridRow(
-                striped: i.isOdd,
-                cells: [
-                  (Text(design.pipes[i].name, style: Mh.cell), 3),
-                  (
-                    Text('${design.pipes[i].outsideDiameterIn.toStringAsFixed(1)}"',
-                        style: Mh.cellNum),
-                    2
+            DenseGrid(
+              minWidth: 560,
+              rows: [
+                const GridHeaderRow(
+                  columns: [
+                    ('Pipe', 3),
+                    ('O.D.', 2),
+                    ('Hole', 2),
+                    ('Boot Type', 5),
+                    ('Stock SKU', 3),
+                  ],
+                ),
+                for (var i = 0; i < design.pipes.length; i++)
+                  GridRow(
+                    striped: i.isOdd,
+                    cells: [
+                      (Text(design.pipes[i].name, style: Mh.cell), 3),
+                      (
+                        Text(
+                          '${design.pipes[i].outsideDiameterIn.toStringAsFixed(1)}"',
+                          style: Mh.cellNum,
+                        ),
+                        2,
+                      ),
+                      (
+                        Text(
+                          '${design.pipes[i].holeSizeIn.toStringAsFixed(1)}"',
+                          style: Mh.cellNum,
+                        ),
+                        2,
+                      ),
+                      (
+                        DenseDropdown<BootType>(
+                          value: design.pipes[i].boot,
+                          items: BootType.values,
+                          labelOf: (b) => b.label,
+                          onChanged: (b) => design.updatePipe(i, (p) => p.boot = b),
+                        ),
+                        5,
+                      ),
+                      (Text(design.pipes[i].boot.sku, style: Mh.cell), 3),
+                    ],
                   ),
-                  (
-                    Text('${design.pipes[i].holeSizeIn.toStringAsFixed(1)}"', style: Mh.cellNum),
-                    2
-                  ),
-                  (
-                    DenseDropdown<BootType>(
-                      value: design.pipes[i].boot,
-                      items: BootType.values,
-                      labelOf: (b) => b.label,
-                      onChanged: (b) => design.updatePipe(i, (p) => p.boot = b),
-                    ),
-                    5
-                  ),
-                  (Text(design.pipes[i].boot.sku, style: Mh.cell), 3),
-                ],
-              ),
+              ],
+            ),
           ],
         ),
       ],

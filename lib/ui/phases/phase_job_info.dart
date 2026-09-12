@@ -67,13 +67,9 @@ class PhaseJobInfo extends StatelessWidget {
             child: const Text('+ NEW STRUCTURE', style: TextStyle(color: Colors.white)),
           ),
           children: [
-            const GridHeaderRow(columns: [
-              ('Mark', 2),
-              ('Job', 4),
-              ('Customer', 3),
-              ('Type', 3),
-              ('', 2),
-            ]),
+            const GridHeaderRow(
+              columns: [('Mark', 2), ('Job', 4), ('Customer', 3), ('Type', 3), ('', 2)],
+            ),
             for (var i = 0; i < app.structures.length; i++)
               GridRow(
                 striped: i.isOdd,
@@ -90,7 +86,7 @@ class PhaseJobInfo extends StatelessWidget {
                             onPressed: () => app.selectStructure(i),
                             child: const Text('OPEN'),
                           ),
-                    2
+                    2,
                   ),
                 ],
               ),
@@ -110,33 +106,36 @@ class _CastDateCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final design = app.design;
     final d = design.castDate;
-    final text = '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+    final text =
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-'
         '${d.day.toString().padLeft(2, '0')}';
-    return Row(children: [
-      Expanded(
-        child: DenseField(
-          key: const Key('field-cast-date'),
-          value: text,
-          onChanged: (v) {
-            final parsed = DateTime.tryParse(v.trim());
-            if (parsed != null) design.castDate = parsed;
+    return Row(
+      children: [
+        Expanded(
+          child: DenseField(
+            key: const Key('field-cast-date'),
+            value: text,
+            onChanged: (v) {
+              final parsed = DateTime.tryParse(v.trim());
+              if (parsed != null) design.castDate = parsed;
+            },
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.calendar_today, size: 15),
+          visualDensity: VisualDensity.compact,
+          tooltip: 'Pick cast date',
+          onPressed: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: design.castDate,
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2040),
+            );
+            if (picked != null) design.castDate = picked;
           },
         ),
-      ),
-      IconButton(
-        icon: const Icon(Icons.calendar_today, size: 15),
-        visualDensity: VisualDensity.compact,
-        tooltip: 'Pick cast date',
-        onPressed: () async {
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: design.castDate,
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2040),
-          );
-          if (picked != null) design.castDate = picked;
-        },
-      ),
-    ]);
+      ],
+    );
   }
 }

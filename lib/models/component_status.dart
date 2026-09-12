@@ -3,12 +3,12 @@ enum ComponentStatus { pendingPour, manufactured, inYard, shipped, delivered }
 
 extension ComponentStatusInfo on ComponentStatus {
   String get label => switch (this) {
-        ComponentStatus.pendingPour => 'Pending Pour',
-        ComponentStatus.manufactured => 'Manufactured',
-        ComponentStatus.inYard => 'In Yard',
-        ComponentStatus.shipped => 'Shipped',
-        ComponentStatus.delivered => 'Delivered',
-      };
+    ComponentStatus.pendingPour => 'Pending Pour',
+    ComponentStatus.manufactured => 'Manufactured',
+    ComponentStatus.inYard => 'In Yard',
+    ComponentStatus.shipped => 'Shipped',
+    ComponentStatus.delivered => 'Delivered',
+  };
 
   /// Next step in the lifecycle, or null at the end of the line.
   ComponentStatus? get next {

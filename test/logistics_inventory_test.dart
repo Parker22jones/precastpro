@@ -160,8 +160,10 @@ void main() {
       final app = singleStructure();
       final record = app.activeStructure;
       final component = record.components.first;
-      expect(() => app.setComponentStatus(record, component, ComponentStatus.shipped),
-          returnsNormally);
+      expect(
+        () => app.setComponentStatus(record, component, ComponentStatus.shipped),
+        returnsNormally,
+      );
     });
   });
 

@@ -72,7 +72,8 @@ class PipeValidator {
       if (invertElevationFt != null && p.invertElevationFt < invertElevationFt - 0.01) {
         notices.add('${p.name}: invert is below the structure invert elevation.');
       }
-      if (rimElevationFt != null && p.invertElevationFt + p.outsideDiameterIn / 12 > rimElevationFt) {
+      if (rimElevationFt != null &&
+          p.invertElevationFt + p.outsideDiameterIn / 12 > rimElevationFt) {
         notices.add('${p.name}: crown of pipe is above the rim elevation.');
       }
     }
@@ -107,11 +108,11 @@ class PipeValidator {
             verticalClearanceIn: verticalClear,
             message: overlapping
                 ? 'OPENINGS OVERLAP: ${a.name} (${a.clockPosition}) and ${b.name} (${b.clockPosition}) '
-                    'intersect by ${horizontalClear.abs().toStringAsFixed(1)}" horizontally and '
-                    '${verticalClear.abs().toStringAsFixed(1)}" vertically.'
+                      'intersect by ${horizontalClear.abs().toStringAsFixed(1)}" horizontally and '
+                      '${verticalClear.abs().toStringAsFixed(1)}" vertically.'
                 : 'TOO CLOSE: ${a.name} (${a.clockPosition}) and ${b.name} (${b.clockPosition}) have only '
-                    '${math.max(horizontalClear, verticalClear).toStringAsFixed(1)}" of clear wall - '
-                    '${minClearanceIn.toStringAsFixed(0)}" minimum required.',
+                      '${math.max(horizontalClear, verticalClear).toStringAsFixed(1)}" of clear wall - '
+                      '${minClearanceIn.toStringAsFixed(0)}" minimum required.',
           ),
         );
       }

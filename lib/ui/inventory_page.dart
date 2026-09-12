@@ -27,35 +27,47 @@ class InventoryPage extends StatelessWidget {
               color: const Color(0xFFFFF4DB),
               border: Border.all(color: Mh.warn, width: 1.5),
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                const Icon(Icons.warning_amber_rounded, color: Mh.warn, size: 18),
-                const SizedBox(width: 6),
-                Text('LOW STOCK ALERT - ${low.length} ITEM(S) AT OR BELOW MINIMUM',
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF8A5A00))),
-              ]),
-              const SizedBox(height: 4),
-              for (final item in low)
-                Text(
-                  '• ${item.sku} ${item.description}: ${item.onHand} on hand, '
-                  'minimum ${item.minThreshold} - reorder ${item.shortfall}+',
-                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A5A00)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Mh.warn, size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      'LOW STOCK ALERT - ${low.length} ITEM(S) AT OR BELOW MINIMUM',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF8A5A00),
+                      ),
+                    ),
+                  ],
                 ),
-            ]),
+                const SizedBox(height: 4),
+                for (final item in low)
+                  Text(
+                    '• ${item.sku} ${item.description}: ${item.onHand} on hand, '
+                    'minimum ${item.minThreshold} - reorder ${item.shortfall}+',
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A5A00)),
+                  ),
+              ],
+            ),
           ),
         for (final category in StockCategory.values)
           SpecPanel(
             title: category.label,
             children: [
-              const GridHeaderRow(columns: [
-                ('SKU', 2),
-                ('Description', 6),
-                ('On Hand', 2),
-                ('Min', 2),
-                ('Status', 3),
-                ('Receive', 3),
-              ]),
+              const GridHeaderRow(
+                columns: [
+                  ('SKU', 2),
+                  ('Description', 6),
+                  ('On Hand', 2),
+                  ('Min', 2),
+                  ('Status', 3),
+                  ('Receive', 3),
+                ],
+              ),
               for (final entry in _indexed(app.inventory, category))
                 GridRow(
                   striped: entry.$1.isOdd,
@@ -74,32 +86,35 @@ class InventoryPage extends StatelessWidget {
                           if (parsed != null) app.setThreshold(entry.$2, parsed.round());
                         },
                       ),
-                      2
+                      2,
                     ),
                     (
                       entry.$2.isLowStock
                           ? const StatusChip(label: 'Low Stock', color: Mh.warn)
                           : const StatusChip(label: 'OK', color: Mh.ok),
-                      3
+                      3,
                     ),
                     (
-                      Row(mainAxisSize: MainAxisSize.min, children: [
-                        IconButton(
-                          key: Key('receive-${entry.$2.sku}'),
-                          icon: const Icon(Icons.add_circle_outline, size: 16),
-                          visualDensity: VisualDensity.compact,
-                          tooltip: 'Receive 10',
-                          onPressed: () => app.receiveStock(entry.$2, 10),
-                        ),
-                        IconButton(
-                          key: Key('issue-${entry.$2.sku}'),
-                          icon: const Icon(Icons.remove_circle_outline, size: 16),
-                          visualDensity: VisualDensity.compact,
-                          tooltip: 'Issue 1',
-                          onPressed: () => app.receiveStock(entry.$2, -1),
-                        ),
-                      ]),
-                      3
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            key: Key('receive-${entry.$2.sku}'),
+                            icon: const Icon(Icons.add_circle_outline, size: 16),
+                            visualDensity: VisualDensity.compact,
+                            tooltip: 'Receive 10',
+                            onPressed: () => app.receiveStock(entry.$2, 10),
+                          ),
+                          IconButton(
+                            key: Key('issue-${entry.$2.sku}'),
+                            icon: const Icon(Icons.remove_circle_outline, size: 16),
+                            visualDensity: VisualDensity.compact,
+                            tooltip: 'Issue 1',
+                            onPressed: () => app.receiveStock(entry.$2, -1),
+                          ),
+                        ],
+                      ),
+                      3,
                     ),
                   ],
                 ),

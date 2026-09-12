@@ -38,10 +38,10 @@ class ElevationPainter extends CustomPainter {
     final topElev = math.max(layout.topOfStackElevationFt, bottomElev + 1);
     final elevSpan = topElev - bottomElev;
 
-    const marginTop = 30.0;
+    const marginTop = 38.0;
     const marginBottom = 34.0;
-    const marginLeft = 96.0;
-    const marginRight = 110.0;
+    const marginLeft = 124.0;
+    const marginRight = 152.0;
 
     final drawH = math.max(size.height - marginTop - marginBottom, 20.0);
     final drawW = math.max(size.width - marginLeft - marginRight, 20.0);
@@ -57,8 +57,12 @@ class ElevationPainter extends CustomPainter {
     _drawFrame(canvas, size, labels, scale);
 
     // Structure centreline.
-    _dashDot(canvas, Offset(centerX, marginTop - 8), Offset(centerX, size.height - marginBottom + 6),
-        _stroke(palette.thinInk, 0.8));
+    _dashDot(
+      canvas,
+      Offset(centerX, marginTop - 8),
+      Offset(centerX, size.height - marginBottom + 6),
+      _stroke(palette.thinInk, 0.8),
+    );
 
     // 8" base floor / sump slab.
     final floorHalf = layout.outsideDiameterIn / 2;
@@ -71,8 +75,13 @@ class ElevationPainter extends CustomPainter {
     canvas.drawRect(floorRect, Paint()..color = palette.concreteDark);
     hatchRect(canvas, floorRect, palette.thinInk, spacing: 7);
     canvas.drawRect(floorRect, _stroke(palette.ink, 1.4));
-    labels.draw(canvas, '8" BASE FLOOR', Offset(x(floorHalf) + 8, floorRect.center.dy - 5), 9,
-        color: palette.callout);
+    labels.draw(
+      canvas,
+      '8" BASE FLOOR',
+      Offset(x(floorHalf) + 8, floorRect.center.dy - 5),
+      9,
+      color: palette.callout,
+    );
 
     // Stacked pieces.
     for (final laid in layout.pieces) {
@@ -118,7 +127,9 @@ class ElevationPainter extends CustomPainter {
           final leftWall = Rect.fromLTRB(x(-halfOut), top, x(-halfIn), bottom);
           final rightWall = Rect.fromLTRB(x(halfIn), top, x(halfOut), bottom);
           canvas.drawRect(
-              Rect.fromLTRB(x(-halfIn), top, x(halfIn), bottom), Paint()..color = palette.paper);
+            Rect.fromLTRB(x(-halfIn), top, x(halfIn), bottom),
+            Paint()..color = palette.paper,
+          );
           for (final wall in [leftWall, rightWall]) {
             hatchRect(canvas, wall, palette.thinInk.withValues(alpha: 0.55));
             canvas.drawRect(wall, _stroke(palette.ink, 1.1));
@@ -140,14 +151,24 @@ class ElevationPainter extends CustomPainter {
       }
 
       // Piece height dimension, left of the structure.
-      final dimX = marginLeft - 34;
+      final dimX = marginLeft - 30;
       if ((bottom - top).abs() > 13) {
         drawExtensionLine(canvas, Offset(x(-halfOut), top), Offset(dimX - 4, top), palette.thinInk);
         drawExtensionLine(
-            canvas, Offset(x(-halfOut), bottom), Offset(dimX - 4, bottom), palette.thinInk);
+          canvas,
+          Offset(x(-halfOut), bottom),
+          Offset(dimX - 4, bottom),
+          palette.thinInk,
+        );
         drawDimensionLine(canvas, Offset(dimX, top), Offset(dimX, bottom), palette.dimension);
-        labels.draw(canvas, feetInches(p.heightIn), Offset(dimX - 6, (top + bottom) / 2 - 6), 8.5,
-            align: LabelAnchor.right, color: palette.dimension);
+        labels.draw(
+          canvas,
+          feetInches(p.heightIn),
+          Offset(dimX - 6, (top + bottom) / 2 - 6),
+          8.5,
+          align: LabelAnchor.right,
+          color: palette.dimension,
+        );
       }
 
       if ((bottom - top).abs() > 11) {
@@ -179,33 +200,52 @@ class ElevationPainter extends CustomPainter {
       );
     }
 
-    // Overall structural depth dimension, far left.
-    final overallX = marginLeft - 70;
+    // Overall structural depth dimension, far left, labelled above the string
+    // so it never collides with the per-piece dimensions.
+    final overallX = marginLeft - 100;
     final yTopStack = y(layout.topOfStackElevationFt);
     final yBottom = y(layout.floorBottomElevationFt);
-    drawDimensionLine(canvas, Offset(overallX, yTopStack), Offset(overallX, yBottom), palette.dimension);
+    drawDimensionLine(
+      canvas,
+      Offset(overallX, yTopStack),
+      Offset(overallX, yBottom),
+      palette.dimension,
+    );
+    labels.reserve(LabelPlacer.corridor(Offset(overallX, yTopStack), Offset(overallX, yBottom)));
     labels.draw(
       canvas,
-      'OVERALL\n${feetInches((layout.topOfStackElevationFt - layout.floorBottomElevationFt) * 12)}',
-      Offset(overallX - 6, (yTopStack + yBottom) / 2 - 10),
+      'OVERALL ${feetInches((layout.topOfStackElevationFt - layout.floorBottomElevationFt) * 12)}',
+      Offset(overallX, yTopStack - 16),
       8.5,
-      align: LabelAnchor.right,
       color: palette.dimension,
     );
 
     // Rim / invert reference datums.
-    _referenceLine(labels, canvas, y(layout.rimElevationFt), x(-layout.outsideDiameterIn / 2) - 18,
-        x(layout.outsideDiameterIn / 2) + 70, 'RIM EL ${layout.rimElevationFt.toStringAsFixed(2)}');
-    _referenceLine(labels, canvas, y(layout.invertElevationFt), x(-layout.outsideDiameterIn / 2) - 18,
-        x(layout.outsideDiameterIn / 2) + 70, 'INV EL ${layout.invertElevationFt.toStringAsFixed(2)}');
+    _referenceLine(
+      labels,
+      canvas,
+      y(layout.rimElevationFt),
+      x(-layout.outsideDiameterIn / 2) - 18,
+      x(layout.outsideDiameterIn / 2) + 70,
+      'RIM EL ${layout.rimElevationFt.toStringAsFixed(2)}',
+    );
+    _referenceLine(
+      labels,
+      canvas,
+      y(layout.invertElevationFt),
+      x(-layout.outsideDiameterIn / 2) - 18,
+      x(layout.outsideDiameterIn / 2) + 70,
+      'INV EL ${layout.invertElevationFt.toStringAsFixed(2)}',
+    );
     if (layout.sumpDepthIn > 0) {
       _referenceLine(
-          labels,
-          canvas,
-          y(layout.sumpFloorElevationFt),
-          x(-layout.outsideDiameterIn / 2) - 18,
-          x(layout.outsideDiameterIn / 2) + 70,
-          'SUMP ${feetInches(layout.sumpDepthIn)} BELOW INV');
+        labels,
+        canvas,
+        y(layout.sumpFloorElevationFt),
+        x(-layout.outsideDiameterIn / 2) - 18,
+        x(layout.outsideDiameterIn / 2) + 70,
+        'SUMP ${feetInches(layout.sumpDepthIn)} BELOW INV',
+      );
     }
 
     // Pipe penetrations.
@@ -218,18 +258,21 @@ class ElevationPainter extends CustomPainter {
       final wallX = x(onRight ? layout.outsideDiameterIn / 2 : -layout.outsideDiameterIn / 2);
       final outX = wallX + (onRight ? 34.0 : -34.0);
 
-      final pipeRect = Rect.fromLTRB(
-        math.min(wallX, outX),
-        yCrown,
-        math.max(wallX, outX),
-        yInv,
-      );
+      final pipeRect = Rect.fromLTRB(math.min(wallX, outX), yCrown, math.max(wallX, outX), yInv);
       canvas.drawRect(pipeRect, Paint()..color = color.withValues(alpha: 0.14));
       canvas.drawRect(pipeRect, _stroke(color, 1.6));
-      _dashDot(canvas, Offset(pipeRect.left - 6, pipeRect.center.dy),
-          Offset(pipeRect.right + 6, pipeRect.center.dy), _stroke(color, 0.8));
-      _dashedLine(canvas, Offset(x(-layout.outsideDiameterIn / 2) - 4, yInv),
-          Offset(x(layout.outsideDiameterIn / 2) + 4, yInv), _stroke(color, 1.0));
+      _dashDot(
+        canvas,
+        Offset(pipeRect.left - 6, pipeRect.center.dy),
+        Offset(pipeRect.right + 6, pipeRect.center.dy),
+        _stroke(color, 0.8),
+      );
+      _dashedLine(
+        canvas,
+        Offset(x(-layout.outsideDiameterIn / 2) - 4, yInv),
+        Offset(x(layout.outsideDiameterIn / 2) + 4, yInv),
+        _stroke(color, 1.0),
+      );
 
       labels.draw(
         canvas,
@@ -249,12 +292,16 @@ class ElevationPainter extends CustomPainter {
   void _drawFrame(Canvas canvas, Size size, LabelPlacer labels, double scale) {
     final border = Rect.fromLTWH(3, 3, size.width - 6, size.height - 6);
     canvas.drawRect(border, _stroke(palette.ink, 1.2));
-    canvas.drawLine(
-        Offset(3, 22), Offset(size.width - 3, 22), _stroke(palette.thinInk, 0.8));
+    canvas.drawLine(Offset(3, 22), Offset(size.width - 3, 22), _stroke(palette.thinInk, 0.8));
     labels.draw(canvas, title, const Offset(9, 6), 11.5, bold: true, color: palette.ink);
-    labels.draw(canvas, 'SCALE 1" = ${(1 / (scale * 12)).toStringAsFixed(2)}\'',
-        Offset(size.width - 9, 6), 9,
-        align: LabelAnchor.right, color: palette.thinInk);
+    labels.draw(
+      canvas,
+      'SCALE 1" = ${(1 / (scale * 12)).toStringAsFixed(2)}\'',
+      Offset(size.width - 9, 6),
+      9,
+      align: LabelAnchor.right,
+      color: palette.thinInk,
+    );
   }
 
   void _drawScaleBar(LabelPlacer labels, Canvas canvas, Size size, double scale) {
@@ -265,16 +312,34 @@ class ElevationPainter extends CustomPainter {
     canvas.drawLine(Offset(x0, y0), Offset(x0 + barLen, y0), paint);
     canvas.drawLine(Offset(x0, y0 - 4), Offset(x0, y0 + 4), paint);
     canvas.drawLine(Offset(x0 + barLen, y0 - 4), Offset(x0 + barLen, y0 + 4), paint);
-    labels.draw(canvas, "1'-0\"", Offset(x0 + barLen + 6, y0 - 6), 8.5,
-        color: palette.thinInk, avoidOverlap: false);
+    labels.draw(
+      canvas,
+      "1'-0\"",
+      Offset(x0 + barLen + 6, y0 - 6),
+      8.5,
+      color: palette.thinInk,
+      avoidOverlap: false,
+    );
   }
 
   void _referenceLine(
-      LabelPlacer labels, Canvas canvas, double yy, double x0, double x1, String text) {
+    LabelPlacer labels,
+    Canvas canvas,
+    double yy,
+    double x0,
+    double x1,
+    String text,
+  ) {
     final paint = _stroke(palette.thinInk, 1.0);
     _dashDot(canvas, Offset(x0, yy), Offset(x1, yy), paint);
-    labels.draw(canvas, text, Offset(x1 + 2, yy - 10), 9,
-        align: LabelAnchor.right, color: palette.callout);
+    labels.draw(
+      canvas,
+      text,
+      Offset(x1 + 2, yy - 10),
+      9,
+      align: LabelAnchor.right,
+      color: palette.callout,
+    );
   }
 
   void _dashedLine(Canvas canvas, Offset a, Offset b, Paint paint) {

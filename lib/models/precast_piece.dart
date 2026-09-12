@@ -3,12 +3,12 @@ enum PieceType { base, riser, flatTop, conicalTop, gradeRing }
 
 extension PieceTypeLabel on PieceType {
   String get label => switch (this) {
-        PieceType.base => 'Base Section',
-        PieceType.riser => 'Riser',
-        PieceType.flatTop => 'Flat Top',
-        PieceType.conicalTop => 'Conical Top',
-        PieceType.gradeRing => 'Grade Ring',
-      };
+    PieceType.base => 'Base Section',
+    PieceType.riser => 'Riser',
+    PieceType.flatTop => 'Flat Top',
+    PieceType.conicalTop => 'Conical Top',
+    PieceType.gradeRing => 'Grade Ring',
+  };
 }
 
 class PrecastPiece {
@@ -216,8 +216,10 @@ class PieceCatalog {
     ),
   ];
 
-  static PrecastPiece byId(String id) =>
-      pieces.firstWhere((p) => p.id == id, orElse: () => throw ArgumentError('Unknown piece id: $id'));
+  static PrecastPiece byId(String id) => pieces.firstWhere(
+    (p) => p.id == id,
+    orElse: () => throw ArgumentError('Unknown piece id: $id'),
+  );
 
   static List<double> get availableDiameters => const [48, 60];
 
@@ -225,9 +227,11 @@ class PieceCatalog {
       .where((p) => p.type == type && (diameterIn == null || p.insideDiameterIn == diameterIn))
       .toList(growable: false);
 
-  static PrecastPiece base(double diameterIn) => ofType(PieceType.base, diameterIn: diameterIn).single;
+  static PrecastPiece base(double diameterIn) =>
+      ofType(PieceType.base, diameterIn: diameterIn).single;
 
-  static List<PrecastPiece> risers(double diameterIn) => ofType(PieceType.riser, diameterIn: diameterIn);
+  static List<PrecastPiece> risers(double diameterIn) =>
+      ofType(PieceType.riser, diameterIn: diameterIn);
 
   static List<PrecastPiece> gradeRings() => ofType(PieceType.gradeRing);
 

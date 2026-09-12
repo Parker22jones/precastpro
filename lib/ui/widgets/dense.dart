@@ -18,7 +18,14 @@ class SectionBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          Expanded(child: Text(title.toUpperCase(), style: Mh.sectionTitle)),
+          Expanded(
+            child: Text(
+              title.toUpperCase(),
+              style: Mh.sectionTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           if (trailing != null) trailing!,
         ],
       ),
@@ -38,10 +45,16 @@ class SpecPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: Mh.gap),
-      decoration: BoxDecoration(color: Mh.field, border: Border.all(color: Mh.gridLine)),
+      decoration: BoxDecoration(
+        color: Mh.field,
+        border: Border.all(color: Mh.gridLine),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [SectionBar(title: title, trailing: trailing), ...children],
+        children: [
+          SectionBar(title: title, trailing: trailing),
+          ...children,
+        ],
       ),
     );
   }
@@ -142,10 +155,7 @@ class _DenseFieldState extends State<DenseField> {
         inputFormatters: widget.numeric
             ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.\-]'))]
             : const <TextInputFormatter>[],
-        decoration: InputDecoration(
-          suffixText: widget.suffix,
-          suffixStyle: Mh.label,
-        ),
+        decoration: InputDecoration(suffixText: widget.suffix, suffixStyle: Mh.label),
         onChanged: widget.onChanged,
       ),
     );
@@ -178,7 +188,10 @@ class DenseDropdown<T> extends StatelessWidget {
       icon: const Icon(Icons.arrow_drop_down, size: 18),
       items: [
         for (final item in items)
-          DropdownMenuItem<T>(value: item, child: Text(labelOf(item), style: Mh.cell)),
+          DropdownMenuItem<T>(
+            value: item,
+            child: Text(labelOf(item), style: Mh.cell),
+          ),
       ],
       onChanged: (v) {
         if (v != null) onChanged(v);
@@ -256,6 +269,30 @@ class GridRow extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Wraps a column of grid rows so that on screens narrower than [minWidth]
+/// the grid scrolls horizontally instead of squeezing every cell into a few
+/// unreadable characters.
+class DenseGrid extends StatelessWidget {
+  const DenseGrid({super.key, required this.rows, this.minWidth = 700});
+
+  final List<Widget> rows;
+  final double minWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final grid = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= minWidth) return grid;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(width: minWidth, child: grid),
+        );
+      },
     );
   }
 }

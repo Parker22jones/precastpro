@@ -5,11 +5,11 @@ import 'package:precastpro/logic/pipe_validator.dart';
 import 'package:precastpro/models/pipe_penetration.dart';
 
 PipePenetration pipe(String name, double od, double inv, double angle) => PipePenetration(
-      name: name,
-      outsideDiameterIn: od,
-      invertElevationFt: inv,
-      horizontalAngleDeg: angle,
-    );
+  name: name,
+  outsideDiameterIn: od,
+  invertElevationFt: inv,
+  horizontalAngleDeg: angle,
+);
 
 void main() {
   const validator = PipeValidator();
@@ -47,7 +47,10 @@ void main() {
     // are exactly 6" clear when their arc distance is 18".
     final thresholdDeg = (18.0 / 26.5) * 180 / math.pi;
 
-    expect(check([pipe('A', 12, 90, 0), pipe('B', 12, 90, thresholdDeg + 0.05)]).conflicts, isEmpty);
+    expect(
+      check([pipe('A', 12, 90, 0), pipe('B', 12, 90, thresholdDeg + 0.05)]).conflicts,
+      isEmpty,
+    );
 
     final tight = check([pipe('A', 12, 90, 0), pipe('B', 12, 90, thresholdDeg - 1)]);
     expect(tight.conflicts, hasLength(1));
@@ -68,11 +71,7 @@ void main() {
   });
 
   test('three pipes report every offending pair', () {
-    final r = check([
-      pipe('A', 18, 90, 0),
-      pipe('B', 18, 90, 8),
-      pipe('C', 18, 90, 16),
-    ]);
+    final r = check([pipe('A', 18, 90, 0), pipe('B', 18, 90, 8), pipe('C', 18, 90, 16)]);
     expect(r.conflicts.length, 3);
   });
 

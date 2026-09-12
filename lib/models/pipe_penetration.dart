@@ -57,17 +57,17 @@ class PipePenetration {
   /// Hole centre coordinates on the structure wall, in inches east/north of
   /// the structure centre, for the given wall radius.
   ({double eastIn, double northIn}) holeCoordinates(double radiusIn) => (
-        eastIn: radiusIn * math.sin(angleRadFromNorthClockwise),
-        northIn: radiusIn * math.cos(angleRadFromNorthClockwise),
-      );
+    eastIn: radiusIn * math.sin(angleRadFromNorthClockwise),
+    northIn: radiusIn * math.cos(angleRadFromNorthClockwise),
+  );
 
   PipePenetration copy() => PipePenetration(
-        name: name,
-        outsideDiameterIn: outsideDiameterIn,
-        invertElevationFt: invertElevationFt,
-        horizontalAngleDeg: horizontalAngleDeg,
-        material: material,
-        boot: boot,
-        holeSizeIn: holeSizeIn,
-      );
+    name: name,
+    outsideDiameterIn: outsideDiameterIn,
+    invertElevationFt: invertElevationFt,
+    horizontalAngleDeg: horizontalAngleDeg,
+    material: material,
+    boot: boot,
+    holeSizeIn: holeSizeIn,
+  );
 }

@@ -3,10 +3,7 @@ import '../models/precast_piece.dart';
 
 /// A single stacked piece placed at its real world elevation.
 class LaidPiece {
-  const LaidPiece({
-    required this.piece,
-    required this.bottomElevationFt,
-  });
+  const LaidPiece({required this.piece, required this.bottomElevationFt});
 
   final PrecastPiece piece;
   final double bottomElevationFt;
@@ -50,8 +47,9 @@ class StructureLayout {
   double get outsideDiameterIn => structureDiameterIn + 2 * wallThicknessIn;
 
   /// Elevations of every horizontal joint in the stack.
-  List<double> get jointElevationsFt =>
-      [for (var i = 0; i < pieces.length - 1; i++) pieces[i].topElevationFt];
+  List<double> get jointElevationsFt => [
+    for (var i = 0; i < pieces.length - 1; i++) pieces[i].topElevationFt,
+  ];
 
   static List<LaidPiece> _lay(StackResult stack, double floorBottomElevationFt) {
     final out = <LaidPiece>[];

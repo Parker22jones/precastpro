@@ -20,6 +20,10 @@ class LabelPlacer {
   static const double _padding = 2.0;
   static const double _spacing = 2.0;
 
+  /// Marks an area of the canvas (a dimension line, a north arrow, a leader)
+  /// as occupied so later annotations are nudged clear of it.
+  void reserve(Rect rect) => _placed.add(rect);
+
   void draw(
     Canvas canvas,
     String text,
@@ -48,8 +52,8 @@ class LabelPlacer {
       textAlign: align == LabelAnchor.right
           ? TextAlign.right
           : align == LabelAnchor.center
-              ? TextAlign.center
-              : TextAlign.left,
+          ? TextAlign.center
+          : TextAlign.left,
     )..layout(minWidth: width, maxWidth: width);
 
     final dx = switch (align) {
@@ -62,6 +66,16 @@ class LabelPlacer {
 
     painter.paint(canvas, rect.topLeft);
     _placed.add(rect);
+  }
+
+  /// Rectangle covering a line segment, inflated by [pad].
+  static Rect corridor(Offset a, Offset b, {double pad = 3}) {
+    return Rect.fromLTRB(
+      math.min(a.dx, b.dx),
+      math.min(a.dy, b.dy),
+      math.max(a.dx, b.dx),
+      math.max(a.dy, b.dy),
+    ).inflate(pad);
   }
 
   Rect _clamp(Rect rect) {

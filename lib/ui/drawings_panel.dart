@@ -27,6 +27,7 @@ class _DrawingsPanelState extends State<DrawingsPanel> {
     final palette = _slate ? CadPalette.slate : CadPalette.light;
     final elevation = _Sheet(
       palette: palette,
+      sheetSize: kElevationSheet,
       child: CustomPaint(
         key: const Key('canvas-elevation'),
         painter: buildElevationPainter(widget.design, palette: palette),
@@ -35,6 +36,7 @@ class _DrawingsPanelState extends State<DrawingsPanel> {
     );
     final plan = _Sheet(
       palette: palette,
+      sheetSize: kPlanSheet,
       child: CustomPaint(
         key: const Key('canvas-plan'),
         painter: buildPlanPainter(widget.design, palette: palette),
@@ -66,28 +68,28 @@ class _DrawingsPanelState extends State<DrawingsPanel> {
           height: Mh.headerHeight,
           color: Mh.chrome,
           padding: const EdgeInsets.only(left: 8, right: 4),
-          child: Row(children: [
-            const Expanded(child: Text('CAD DRAWING SHEET', style: Mh.sectionTitle)),
-            toggle,
-          ]),
+          child: Row(
+            children: [
+              const Expanded(child: Text('CAD DRAWING SHEET', style: Mh.sectionTitle)),
+              toggle,
+            ],
+          ),
         ),
         Expanded(
           child: widget.stacked
               ? ListView(
                   padding: const EdgeInsets.all(4),
-                  children: [
-                    SizedBox(height: 440, child: elevation),
-                    const SizedBox(height: 4),
-                    SizedBox(height: 400, child: plan),
-                  ],
+                  children: [elevation, const SizedBox(height: 4), plan],
                 )
               : Padding(
                   padding: const EdgeInsets.all(4),
-                  child: Column(children: [
-                    Expanded(flex: 3, child: elevation),
-                    const SizedBox(height: 4),
-                    Expanded(flex: 2, child: plan),
-                  ]),
+                  child: Column(
+                    children: [
+                      Expanded(flex: 3, child: elevation),
+                      const SizedBox(height: 4),
+                      Expanded(flex: 2, child: plan),
+                    ],
+                  ),
                 ),
         ),
       ],
@@ -95,15 +97,16 @@ class _DrawingsPanelState extends State<DrawingsPanel> {
   }
 }
 
-ElevationPainter buildElevationPainter(DesignState design,
-        {CadPalette palette = CadPalette.light}) =>
-    ElevationPainter(
-      layout: design.layout,
-      pipes: design.pipes,
-      conflictedPipes: design.conflictedPipeNames,
-      palette: palette,
-      title: 'ELEVATION - ${design.structureMark}',
-    );
+ElevationPainter buildElevationPainter(
+  DesignState design, {
+  CadPalette palette = CadPalette.light,
+}) => ElevationPainter(
+  layout: design.layout,
+  pipes: design.pipes,
+  conflictedPipes: design.conflictedPipeNames,
+  palette: palette,
+  title: 'ELEVATION - ${design.structureMark}',
+);
 
 PlanPainter buildPlanPainter(DesignState design, {CadPalette palette = CadPalette.light}) =>
     PlanPainter(
@@ -115,17 +118,33 @@ PlanPainter buildPlanPainter(DesignState design, {CadPalette palette = CadPalett
       title: 'PLAN - ${design.structureMark}',
     );
 
+/// Logical drawing-sheet sizes. The painters are always laid out at these
+/// sizes and scaled to fit, so annotations keep the same spacing on a phone,
+/// on a monitor and in the exported PDF.
+const Size kElevationSheet = Size(640, 900);
+const Size kPlanSheet = Size(640, 640);
+
 class _Sheet extends StatelessWidget {
-  const _Sheet({required this.child, required this.palette});
+  const _Sheet({required this.child, required this.palette, required this.sheetSize});
 
   final Widget child;
   final CadPalette palette;
+  final Size sheetSize;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: palette.paper, border: Border.all(color: Mh.gridLine)),
-      child: child,
+      decoration: BoxDecoration(
+        color: palette.paper,
+        border: Border.all(color: Mh.gridLine),
+      ),
+      child: AspectRatio(
+        aspectRatio: sheetSize.width / sheetSize.height,
+        child: FittedBox(
+          fit: BoxFit.fill,
+          child: SizedBox(width: sheetSize.width, height: sheetSize.height, child: child),
+        ),
+      ),
     );
   }
 }

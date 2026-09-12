@@ -44,17 +44,19 @@ class PhasePipeSchedule extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                LayoutBuilder(builder: (context, constraints) {
-                  final narrow = constraints.maxWidth < 640;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (!narrow) const GridHeaderRow(columns: columns),
-                      for (var i = 0; i < design.pipes.length; i++)
-                        _PipeRow(index: i, narrow: narrow, radiusIn: radiusIn, columns: columns),
-                    ],
-                  );
-                }),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final narrow = constraints.maxWidth < 640;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (!narrow) const GridHeaderRow(columns: columns),
+                        for (var i = 0; i < design.pipes.length; i++)
+                          _PipeRow(index: i, narrow: narrow, radiusIn: radiusIn, columns: columns),
+                      ],
+                    );
+                  },
+                ),
                 if (validation.conflicts.isNotEmpty)
                   Container(
                     margin: const EdgeInsets.all(Mh.gap),
@@ -69,12 +71,17 @@ class PhasePipeSchedule extends StatelessWidget {
                         Text(
                           'PENETRATION CONFLICT - ${validation.conflicts.length} ISSUE(S)',
                           style: const TextStyle(
-                              color: Mh.danger, fontWeight: FontWeight.w800, fontSize: 12),
+                            color: Mh.danger,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         for (final c in validation.conflicts)
-                          Text('• ${c.message}',
-                              style: const TextStyle(color: Mh.danger, fontSize: 11.5)),
+                          Text(
+                            '• ${c.message}',
+                            style: const TextStyle(color: Mh.danger, fontSize: 11.5),
+                          ),
                         for (final n in validation.notices)
                           Text('• $n', style: const TextStyle(color: Mh.danger, fontSize: 11.5)),
                       ],
@@ -90,8 +97,7 @@ class PhasePipeSchedule extends StatelessWidget {
                     ),
                     child: const Text(
                       'SPATIAL CHECK PASSED - all penetrations clear by 6" minimum.',
-                      style: TextStyle(
-                          color: Mh.ok, fontWeight: FontWeight.w700, fontSize: 11.5),
+                      style: TextStyle(color: Mh.ok, fontWeight: FontWeight.w700, fontSize: 11.5),
                     ),
                   ),
               ],
@@ -194,30 +200,22 @@ class _PipeRow extends StatelessWidget {
     }
 
     // Narrow screens: two stacked grid rows so every cell stays usable.
-    return Column(children: [
-      const GridHeaderRow(columns: [('Pipe', 3), ('Type', 3), ('O.D.', 3), ('Hole', 3), ('', 2)]),
-      GridRow(
-        highlight: conflicted ? const Color(0xFFFDECEA) : null,
-        cells: [
-          (cells[0], 3),
-          (cells[1], 3),
-          (cells[2], 3),
-          (cells[3], 3),
-          (cells[8], 2),
-        ],
-      ),
-      const GridHeaderRow(
-          columns: [('Invert', 3), ('A-Clock', 3), ('Clock', 2), ('Hole X/Y', 4)]),
-      GridRow(
-        highlight: conflicted ? const Color(0xFFFDECEA) : null,
-        cells: [
-          (cells[4], 3),
-          (cells[5], 3),
-          (cells[6], 2),
-          (cells[7], 4),
-        ],
-      ),
-      const SizedBox(height: Mh.gap),
-    ]);
+    return Column(
+      children: [
+        const GridHeaderRow(columns: [('Pipe', 3), ('Type', 3), ('O.D.', 3), ('Hole', 3), ('', 2)]),
+        GridRow(
+          highlight: conflicted ? const Color(0xFFFDECEA) : null,
+          cells: [(cells[0], 3), (cells[1], 3), (cells[2], 3), (cells[3], 3), (cells[8], 2)],
+        ),
+        const GridHeaderRow(
+          columns: [('Invert', 3), ('A-Clock', 3), ('Clock', 2), ('Hole X/Y', 4)],
+        ),
+        GridRow(
+          highlight: conflicted ? const Color(0xFFFDECEA) : null,
+          cells: [(cells[4], 3), (cells[5], 3), (cells[6], 2), (cells[7], 4)],
+        ),
+        const SizedBox(height: Mh.gap),
+      ],
+    );
   }
 }

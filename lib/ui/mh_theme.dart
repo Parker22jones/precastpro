@@ -29,25 +29,36 @@ class Mh {
   static const double headerHeight = 24;
   static const double gap = 6;
 
-  static const TextStyle label =
-      TextStyle(fontSize: 11, color: subtleText, fontWeight: FontWeight.w600, letterSpacing: 0.2);
+  static const TextStyle label = TextStyle(
+    fontSize: 11,
+    color: subtleText,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.2,
+  );
   static const TextStyle cell = TextStyle(fontSize: 12, color: text);
-  static const TextStyle cellNum =
-      TextStyle(fontSize: 12, color: text, fontFeatures: [FontFeature.tabularFigures()]);
+  static const TextStyle cellNum = TextStyle(
+    fontSize: 12,
+    color: text,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
   static const TextStyle header = TextStyle(
-      fontSize: 10.5, color: text, fontWeight: FontWeight.w700, letterSpacing: 0.6);
+    fontSize: 10.5,
+    color: text,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.6,
+  );
   static const TextStyle sectionTitle = TextStyle(
-      fontSize: 12, color: Colors.white, fontWeight: FontWeight.w700, letterSpacing: 0.8);
+    fontSize: 12,
+    color: Colors.white,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.8,
+  );
 
   static ThemeData themeData() {
     final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
     return base.copyWith(
       scaffoldBackgroundColor: surface,
-      colorScheme: base.colorScheme.copyWith(
-        primary: accent,
-        surface: surface,
-        error: danger,
-      ),
+      colorScheme: base.colorScheme.copyWith(primary: accent, surface: surface, error: danger),
       visualDensity: VisualDensity.compact,
       dividerTheme: const DividerThemeData(color: gridLine, space: 1, thickness: 1),
       textTheme: base.textTheme.apply(bodyColor: text, displayColor: text),
