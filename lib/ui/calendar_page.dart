@@ -261,11 +261,24 @@ class _CastingLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheduled = app.castingLineFor(day);
-    final weight = scheduled.fold(0.0, (sum, r) => sum + r.totalWeightLbs);
+    final concreteLbs = app.concreteWeightLbsFor(day);
+    final cuYd = app.pourVolumeCuYdFor(day);
+    final over = app.isOverPourCapacity(day);
 
     return SpecPanel(
       title: 'Casting Line ${_fmt(day)} - ${scheduled.length} structures',
-      trailing: Text('${weight.toStringAsFixed(0)} LB', style: Mh.sectionTitle),
+      trailing: Flexible(
+        child: Text(
+          key: const Key('cal-pour-volume'),
+          '${cuYd.toStringAsFixed(2)} CY / ${concreteLbs.toStringAsFixed(0)} LB'
+          '${over ? ' OVER CAP' : ''}',
+          style: Mh.sectionTitle,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.right,
+        ),
+      ),
       children: [
         if (scheduled.isEmpty)
           const Padding(
@@ -283,6 +296,7 @@ class _CastingLine extends StatelessWidget {
                   ('Job', 4),
                   ('Type', 3),
                   ('Status', 3),
+                  ('Cu yd', 2),
                   ('', 3),
                 ],
               ),
@@ -313,6 +327,13 @@ class _CastingLine extends StatelessWidget {
                         color: statusColor(scheduled[i].rollupStatus),
                       ),
                       3,
+                    ),
+                    (
+                      Text(
+                        scheduled[i].pourVolumeCuYd.toStringAsFixed(2),
+                        style: Mh.cellNum,
+                      ),
+                      2,
                     ),
                     (
                       TextButton(

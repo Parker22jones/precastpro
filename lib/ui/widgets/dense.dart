@@ -108,15 +108,24 @@ class DenseField extends StatefulWidget {
     required this.value,
     required this.onChanged,
     this.numeric = false,
+    this.dimension = false,
     this.suffix,
     this.textAlign,
+    this.onSubmitted,
   });
 
   final String value;
   final ValueChanged<String> onChanged;
   final bool numeric;
+
+  /// Accepts shop dimension shorthand as well as plain numbers (`4' 6"`).
+  final bool dimension;
+
   final String? suffix;
   final TextAlign? textAlign;
+
+  /// Fired on Enter, so a grid row can be committed from the keyboard.
+  final ValueChanged<String>? onSubmitted;
 
   @override
   State<DenseField> createState() => _DenseFieldState();
@@ -143,20 +152,31 @@ class _DenseFieldState extends State<DenseField> {
 
   @override
   Widget build(BuildContext context) {
+    final right = widget.numeric || widget.dimension;
     return Focus(
       onFocusChange: (f) => _hasFocus = f,
       child: TextField(
         controller: _controller,
-        style: widget.numeric ? Mh.cellNum : Mh.cell,
-        textAlign: widget.textAlign ?? (widget.numeric ? TextAlign.right : TextAlign.left),
-        keyboardType: widget.numeric
+        style: right ? Mh.cellNum : Mh.cell,
+        textAlign: widget.textAlign ?? (right ? TextAlign.right : TextAlign.left),
+        textInputAction: TextInputAction.next,
+        keyboardType: right
             ? const TextInputType.numberWithOptions(decimal: true, signed: true)
             : TextInputType.text,
-        inputFormatters: widget.numeric
-            ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.\-]'))]
+        inputFormatters: right
+            ? [
+                FilteringTextInputFormatter.allow(
+                  widget.dimension ? RegExp(r'[0-9.\-\x27"]') : RegExp(r'[0-9.\-]'),
+                ),
+              ]
             : const <TextInputFormatter>[],
         decoration: InputDecoration(suffixText: widget.suffix, suffixStyle: Mh.label),
         onChanged: widget.onChanged,
+        onSubmitted: (v) {
+          widget.onSubmitted?.call(v);
+          // Enter moves on to the next cell, the way the shop tabs a sheet.
+          if (widget.onSubmitted == null) FocusScope.of(context).nextFocus();
+        },
       ),
     );
   }

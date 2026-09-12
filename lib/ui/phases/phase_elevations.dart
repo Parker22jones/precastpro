@@ -87,7 +87,7 @@ class PhaseElevations extends StatelessWidget {
                 child: DenseField(
                   key: const Key('field-inside-width'),
                   value: design.insideWidthIn.toStringAsFixed(1),
-                  numeric: true,
+                  dimension: true,
                   onChanged: (v) {
                     final parsed = parseFeetInches(v);
                     if (parsed != null) design.insideWidthIn = parsed;
@@ -99,7 +99,7 @@ class PhaseElevations extends StatelessWidget {
                 child: DenseField(
                   key: const Key('field-inside-length'),
                   value: design.insideLengthIn.toStringAsFixed(1),
-                  numeric: true,
+                  dimension: true,
                   onChanged: (v) {
                     final parsed = parseFeetInches(v);
                     if (parsed != null) design.insideLengthIn = parsed;
@@ -108,10 +108,34 @@ class PhaseElevations extends StatelessWidget {
               ),
             ],
             SpecRow(
-              label: 'Wall Thickness',
-              child: Text(
-                '${design.layout.wallThicknessIn.toStringAsFixed(0)}"',
-                style: Mh.cellNum,
+              label: 'Wall Thickness (in)',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: DenseField(
+                      key: Key('field-wall-${design.structureShape.name}-'
+                          '${design.size.insideWidthIn.round()}x${design.size.insideLengthIn.round()}'),
+                      value: design.wallThicknessIn.toStringAsFixed(1),
+                      numeric: true,
+                      onChanged: (v) {
+                        final parsed = parseNum(v);
+                        if (parsed != null) design.wallThicknessIn = parsed;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  design.isWallStandard
+                      ? const StatusChip(label: 'ASTM std', color: Mh.ok)
+                      : InkWell(
+                          key: const Key('btn-wall-standard'),
+                          onTap: design.resetWallToStandard,
+                          child: StatusChip(
+                            label: 'custom - reset to '
+                                '${design.standardWallThicknessIn.toStringAsFixed(0)}"',
+                            color: Mh.warn,
+                          ),
+                        ),
+                ],
               ),
             ),
             SpecRow(
@@ -148,6 +172,16 @@ class PhaseElevations extends StatelessWidget {
               child: Text(
                 '${stack.structuralDepthIn.toStringAsFixed(2)}"  '
                 '(rim - invert + sump - ${design.baseFloorThicknessIn.toStringAsFixed(0)}" floor)',
+              ),
+            ),
+            if (stack.items.isNotEmpty)
+            SpecRow(
+              label: 'Base Section',
+              child: Text(
+                '${stack.items.first.piece.heightIn.toStringAsFixed(1)}" high, '
+                '${stack.items.first.piece.weightLbs.toStringAsFixed(0)} lb'
+                '${design.sumpDepthIn > 0.01 ? ' (incl. ${design.sumpDepthIn.toStringAsFixed(0)}" sump)' : ''}',
+                style: Mh.cellNum,
               ),
             ),
             SpecRow(

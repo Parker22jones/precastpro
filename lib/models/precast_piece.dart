@@ -284,11 +284,18 @@ class PieceCatalog {
 
   /// Pieces available for [size]: the stock round forms, or parametric box
   /// pieces sized from the interior dimensions on the plans.
-  static PieceSet forSize(StructureSize size) {
+  ///
+  /// [sumpDepthIn] deepens the base section: the shop casts the sump into the
+  /// base rather than adding a piece, so the section gets taller and heavier.
+  static PieceSet forSize(
+    StructureSize size, {
+    double sumpDepthIn = 0,
+    double floorThicknessIn = kBaseFloorThicknessIn,
+  }) {
     if (size.isRound) {
       final diameterIn = size.insideDiameterIn;
       return PieceSet(
-        base: base(diameterIn),
+        base: _withSump(base(diameterIn), sumpDepthIn),
         risers: risers(diameterIn),
         flatTop: top(diameterIn, conical: false),
         conicalTop: top(diameterIn, conical: true),
@@ -296,10 +303,38 @@ class PieceCatalog {
       );
     }
     return PieceSet(
-      base: _boxBase(size),
+      base: _boxBase(size, sumpDepthIn: sumpDepthIn, floorThicknessIn: floorThicknessIn),
       risers: [for (final h in const [12.0, 24.0, 36.0, 48.0]) _boxRiser(size, h)],
       flatTop: _boxTop(size),
       gradeRings: gradeRings(),
+    );
+  }
+
+  /// Base section for [size], including any sump cast into it.
+  static PrecastPiece baseFor(
+    StructureSize size, {
+    double sumpDepthIn = 0,
+    double floorThicknessIn = kBaseFloorThicknessIn,
+  }) => forSize(size, sumpDepthIn: sumpDepthIn, floorThicknessIn: floorThicknessIn).base;
+
+  /// Deepens a stock round base by [sumpDepthIn], adding the extra ring of
+  /// barrel concrete the deeper section carries.
+  static PrecastPiece _withSump(PrecastPiece base, double sumpDepthIn) {
+    if (sumpDepthIn <= 0.01) return base;
+    final od = base.outsideDiameterIn;
+    final id = base.insideDiameterIn;
+    final ringAreaSqIn = math.pi * (od * od - id * id) / 4.0;
+    final addedLbs = (ringAreaSqIn * sumpDepthIn / 1728.0) * kConcreteDensityPcf;
+    return PrecastPiece(
+      id: '${base.id}-S${sumpDepthIn.round()}',
+      description:
+          '${base.description.replaceAll(')', '')}, ${sumpDepthIn.round()}" sump)',
+      type: PieceType.base,
+      insideDiameterIn: base.insideDiameterIn,
+      insideLengthIn: base.insideLengthIn,
+      heightIn: base.heightIn + sumpDepthIn,
+      weightLbs: base.weightLbs + addedLbs,
+      wallThicknessIn: base.wallThicknessIn,
     );
   }
 
@@ -317,16 +352,27 @@ class PieceCatalog {
   static String _boxSizeText(StructureSize size) =>
       '${size.insideWidthIn.round()}" x ${size.insideLengthIn.round()}"';
 
-  static PrecastPiece _boxBase(StructureSize size) => PrecastPiece(
-    id: 'BOX-B-${_boxTag(size)}',
-    description: '${_boxSizeText(size)} Box Base Section (8" floor)',
-    type: PieceType.base,
-    insideDiameterIn: size.insideWidthIn,
-    insideLengthIn: size.insideLengthIn,
-    heightIn: 48,
-    weightLbs: _boxWeightLbs(size, 48, slabThicknessIn: kBaseFloorThicknessIn),
-    wallThicknessIn: size.wallThicknessIn,
-  );
+  static PrecastPiece _boxBase(
+    StructureSize size, {
+    double sumpDepthIn = 0,
+    double floorThicknessIn = kBaseFloorThicknessIn,
+  }) {
+    final sump = math.max(sumpDepthIn, 0.0);
+    final heightIn = 48 + sump;
+    final deep = sump > 0.01;
+    return PrecastPiece(
+      id: 'BOX-B-${_boxTag(size)}${deep ? '-S${sump.round()}' : ''}',
+      description:
+          '${_boxSizeText(size)} Box Base Section (${floorThicknessIn.round()}" floor'
+          '${deep ? ', ${sump.round()}" sump' : ''})',
+      type: PieceType.base,
+      insideDiameterIn: size.insideWidthIn,
+      insideLengthIn: size.insideLengthIn,
+      heightIn: heightIn,
+      weightLbs: _boxWeightLbs(size, heightIn, slabThicknessIn: floorThicknessIn),
+      wallThicknessIn: size.wallThicknessIn,
+    );
+  }
 
   static PrecastPiece _boxRiser(StructureSize size, double heightIn) => PrecastPiece(
     id: 'BOX-R-${_boxTag(size)}-${heightIn.round()}',

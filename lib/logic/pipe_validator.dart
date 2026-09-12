@@ -69,6 +69,23 @@ class PipeValidator {
           '${size.sizeLabel} structure - use a larger structure or a doghouse base.',
         );
       }
+      final face = size.wallFaceFor(p.normalizedAngleDeg);
+      if (face != null) {
+        final skewDeg = size.skewDegFor(p.normalizedAngleDeg);
+        final cutIn = size.wallCutWidthIn(p.holeSizeIn, p.normalizedAngleDeg);
+        final faceLengthIn = face.isEastWest ? size.insideLengthIn : size.insideWidthIn;
+        if (skewDeg > 60) {
+          notices.add(
+            '${p.name}: enters the ${face.label} at ${skewDeg.toStringAsFixed(0)}\u00B0 skew - '
+            'the cut runs out along the face, rotate the pipe onto the adjacent wall.',
+          );
+        } else if (cutIn > faceLengthIn - minClearanceIn) {
+          notices.add(
+            '${p.name}: ${cutIn.toStringAsFixed(1)}" skewed cut in the ${face.label} leaves less '
+            'than ${minClearanceIn.toStringAsFixed(0)}" of wall at the corners.',
+          );
+        }
+      }
       if (floorTopElevationFt != null && p.invertElevationFt < floorTopElevationFt - 0.001) {
         notices.add(
           '${p.name}: invert ${p.invertElevationFt.toStringAsFixed(2)} is below the top of the '

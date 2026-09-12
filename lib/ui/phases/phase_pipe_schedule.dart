@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../models/job_spec.dart';
+import '../../models/pipe_penetration.dart';
 import '../../models/pipe_product.dart';
+import '../../models/structure_size.dart';
 import '../app_scope.dart';
 import '../mh_theme.dart';
 import '../widgets/dense.dart';
@@ -29,6 +31,7 @@ class PhasePipeSchedule extends StatelessWidget {
       ('Clock', 2),
       ('Connector', 5),
       ('Hole X/Y in', 4),
+      ('Wall / cut in', 4),
       ('', 2),
     ];
 
@@ -119,8 +122,6 @@ class PhasePipeSchedule extends StatelessWidget {
                             '• ${c.message}',
                             style: const TextStyle(color: Mh.danger, fontSize: 11.5),
                           ),
-                        for (final n in validation.notices)
-                          Text('• $n', style: const TextStyle(color: Mh.danger, fontSize: 11.5)),
                       ],
                     ),
                   )
@@ -137,6 +138,31 @@ class PhasePipeSchedule extends StatelessWidget {
                       style: TextStyle(color: Mh.ok, fontWeight: FontWeight.w700, fontSize: 11.5),
                     ),
                   ),
+                if (validation.notices.isNotEmpty)
+                  Container(
+                    key: const Key('pipe-notices'),
+                    margin: const EdgeInsets.symmetric(horizontal: Mh.gap),
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF6E5),
+                      border: Border.all(color: Mh.warn),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SHOP NOTES - ${validation.notices.length}',
+                          style: const TextStyle(
+                            color: Mh.warn,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                        for (final n in validation.notices)
+                          Text('• $n', style: const TextStyle(color: Mh.warn, fontSize: 11.5)),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -144,6 +170,16 @@ class PhasePipeSchedule extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Wall face the pipe cuts and the width of that cut, which stretches with
+/// the skew on a box; a round barrel is always cored radially.
+String _cutText(StructureSize size, PipePenetration pipe) {
+  final face = size.wallFaceFor(pipe.normalizedAngleDeg);
+  if (face == null) return 'RADIAL ${pipe.holeSizeIn.toStringAsFixed(1)}';
+  final skew = size.skewDegFor(pipe.normalizedAngleDeg);
+  final cut = size.wallCutWidthIn(pipe.holeSizeIn, pipe.normalizedAngleDeg);
+  return '${face.label} ${cut.toStringAsFixed(1)} @ ${skew.toStringAsFixed(0)}\u00B0';
 }
 
 class _PipeRow extends StatelessWidget {
@@ -242,6 +278,14 @@ class _PipeRow extends StatelessWidget {
         key: Key('pipe-$index-angle'),
         value: pipe.horizontalAngleDeg.toStringAsFixed(0),
         numeric: true,
+        // Enter at the end of the last line starts the next penetration.
+        onSubmitted: (_) {
+          if (index == design.pipes.length - 1) {
+            design.addPipe();
+          } else {
+            FocusScope.of(context).nextFocus();
+          }
+        },
         onChanged: (v) {
           final parsed = parseNum(v);
           if (parsed != null) design.updatePipe(index, (p) => p.horizontalAngleDeg = parsed);
@@ -257,6 +301,11 @@ class _PipeRow extends StatelessWidget {
       ),
       Text(
         'E ${coords.eastIn.toStringAsFixed(1)} / N ${coords.northIn.toStringAsFixed(1)}',
+        style: Mh.cellNum,
+      ),
+      Text(
+        key: Key('pipe-$index-cut'),
+        _cutText(design.size, pipe),
         style: Mh.cellNum,
       ),
       IconButton(
@@ -285,14 +334,14 @@ class _PipeRow extends StatelessWidget {
         const GridHeaderRow(columns: [('Pipe', 3), ('Type', 3), ('O.D.', 3), ('Hole', 3), ('', 2)]),
         GridRow(
           highlight: highlight,
-          cells: [(cells[0], 3), (cells[1], 3), (cells[4], 3), (cells[5], 3), (cells[11], 2)],
+          cells: [(cells[0], 3), (cells[1], 3), (cells[4], 3), (cells[5], 3), (cells[12], 2)],
         ),
         const GridHeaderRow(
-          columns: [('Invert', 3), ('A-Clock', 3), ('Clock', 2), ('Hole X/Y', 4)],
+          columns: [('Invert', 3), ('A-Clock', 3), ('Hole X/Y', 4), ('Wall / cut', 4)],
         ),
         GridRow(
           highlight: highlight,
-          cells: [(cells[6], 3), (cells[7], 3), (cells[8], 2), (cells[10], 4)],
+          cells: [(cells[6], 3), (cells[7], 3), (cells[10], 4), (cells[11], 4)],
         ),
         const GridHeaderRow(columns: [('Product', 4), ('Nom', 2), ('Connector', 5)]),
         GridRow(

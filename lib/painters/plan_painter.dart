@@ -307,6 +307,18 @@ class PlanPainter extends CustomPainter {
       cadStroke(holeColor, CadWeight.pipe),
     );
 
+    // On a box the opening is cut in a flat face, so a skewed pipe stretches
+    // the cut along that face: mark the cut on both wall faces to scale.
+    final face = size.wallFaceFor(angle);
+    final cutWidthIn = face == null ? 0.0 : size.wallCutWidthIn(pipe.holeSizeIn, angle);
+    if (face != null) {
+      final faceDir = face.isEastWest ? const Offset(0, 1) : const Offset(1, 0);
+      final halfCut = r(cutWidthIn / 2);
+      final cut = cadStroke(holeColor, CadWeight.outline);
+      canvas.drawLine(wallIn - faceDir * halfCut, wallIn + faceDir * halfCut, cut);
+      canvas.drawLine(holeOuter - faceDir * halfCut, holeOuter + faceDir * halfCut, cut);
+    }
+
     labels.reserve(LabelPlacer.corridor(center, tip, pad: halfPipe + 2));
 
     // Angle callout parked outside the barrel on the pipe's own heading.
@@ -321,7 +333,9 @@ class PlanPainter extends CustomPainter {
     final rect = labels.draw(
       canvas,
       '${pipe.name}\n${angle.toStringAsFixed(0)}\u00B0 (${pipe.clockPosition})\n'
-      'HOLE ${inchesText(pipe.holeSizeIn)}\u00F8',
+      'HOLE ${inchesText(pipe.holeSizeIn)}\u00F8'
+      '${face == null ? '' : '\n${face.label} CUT ${inchesText(cutWidthIn)} '
+                '@ ${size.skewDegFor(angle).toStringAsFixed(0)}\u00B0 SKEW'}',
       Offset(anchor.dx, anchor.dy - (angle > 90 && angle < 270 ? 2 : 30)),
       8.5,
       align: vertical && angle > 90 && !nearNorth

@@ -93,7 +93,12 @@ class StackCalculator {
       );
     }
 
-    final set = PieceCatalog.forSize(size);
+    // The sump is cast into the base section, so the base grows with it.
+    final set = PieceCatalog.forSize(
+      size,
+      sumpDepthIn: sumpDepthIn,
+      floorThicknessIn: baseFloorThicknessIn,
+    );
     final base = set.base;
     final top = set.top(conical: conicalTop);
     if (conicalTop && !set.hasConicalTop) {

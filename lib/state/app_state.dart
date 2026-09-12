@@ -7,6 +7,7 @@ import '../models/job.dart';
 import '../models/job_spec.dart';
 import '../models/pipe_penetration.dart';
 import '../models/pipe_product.dart';
+import '../models/precast_piece.dart';
 import 'design_state.dart';
 
 /// A structure that has been released from engineering into the yard: its
@@ -27,6 +28,13 @@ class StructureRecord {
 
   bool get isPoured => components.isNotEmpty && components.every((c) => c.status != ComponentStatus.pendingPour);
   double get totalWeightLbs => components.fold(0.0, (s, c) => s + c.weightLbs);
+
+  /// Concrete only - castings, boots and steps are pulled from stock rather
+  /// than poured, so they do not count against the day's yardage.
+  double get concreteWeightLbs => design.stack.totalWeightLbs;
+
+  /// Concrete this structure takes out of the batch plant, in cubic yards.
+  double get pourVolumeCuYd => concreteWeightLbs / (kConcreteDensityPcf * 27.0);
 
   int countWithStatus(ComponentStatus status) => components.where((c) => c.status == status).length;
 
@@ -156,6 +164,30 @@ class AppState extends ChangeNotifier {
     });
     return list;
   }
+
+  /// Concrete scheduled for [day] across every job, in pounds.
+  double concreteWeightLbsFor(DateTime day) =>
+      castingLineFor(day).fold(0.0, (sum, r) => sum + r.concreteWeightLbs);
+
+  /// Concrete scheduled for [day] across every job, in cubic yards - what the
+  /// plant manager books against the batch plant.
+  double pourVolumeCuYdFor(DateTime day) =>
+      concreteWeightLbsFor(day) / (kConcreteDensityPcf * 27.0);
+
+  /// Yardage the plant can batch in one shift.
+  static const double dailyPourCapacityCuYd = 40.0;
+
+  bool isOverPourCapacity(DateTime day) =>
+      pourVolumeCuYdFor(day) > dailyPourCapacityCuYd;
+
+  static DateTime get tomorrow {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+  }
+
+  /// Tomorrow's run - the view plant managers open first each afternoon.
+  List<StructureRecord> get tomorrowCastingLine => castingLineFor(tomorrow);
+  double get tomorrowPourVolumeCuYd => pourVolumeCuYdFor(tomorrow);
 
   /// Unpoured structures ranked by priority, for drafting into a run.
   List<StructureRecord> unpouredBacklog() {

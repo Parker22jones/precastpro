@@ -31,7 +31,7 @@ class DesignState extends ChangeNotifier {
     StructureShape structureShape = StructureShape.round,
     double? insideWidthIn,
     double? insideLengthIn,
-    double boxWallThicknessIn = kBoxWallThicknessIn,
+    double? wallThicknessIn,
     double baseFloorThicknessIn = kBaseFloorThicknessIn,
     bool conicalTop = true,
     BootType defaultBoot = BootType.aLok,
@@ -53,7 +53,7 @@ class DesignState extends ChangeNotifier {
        _structureShape = structureShape,
        _insideWidthIn = insideWidthIn ?? 48,
        _insideLengthIn = insideLengthIn ?? 60,
-       _boxWallThicknessIn = boxWallThicknessIn,
+       _wallThicknessOverrideIn = wallThicknessIn,
        _baseFloorThicknessIn = baseFloorThicknessIn,
        _conicalTop = conicalTop,
        _defaultBoot = defaultBoot,
@@ -96,7 +96,7 @@ class DesignState extends ChangeNotifier {
   StructureShape _structureShape;
   double _insideWidthIn;
   double _insideLengthIn;
-  double _boxWallThicknessIn;
+  double? _wallThicknessOverrideIn;
   double _baseFloorThicknessIn;
   bool _conicalTop;
   BootType _defaultBoot;
@@ -116,17 +116,30 @@ class DesignState extends ChangeNotifier {
   StructureShape get structureShape => _structureShape;
   double get insideWidthIn => _insideWidthIn;
   double get insideLengthIn => _insideLengthIn;
-  double get boxWallThicknessIn => _boxWallThicknessIn;
   double get baseFloorThicknessIn => _baseFloorThicknessIn;
   bool get conicalTop => _conicalTop;
 
+  /// Wall the shop would cast for the current interior, per ASTM.
+  double get standardWallThicknessIn => StructureSize.standardWallThicknessIn(
+    shape: _structureShape,
+    insideWidthIn: _structureShape == StructureShape.round ? _structureDiameterIn : _insideWidthIn,
+    insideLengthIn: _structureShape == StructureShape.round ? _structureDiameterIn : _insideLengthIn,
+  );
+
+  /// Wall in force: the standard for the current interior unless the designer
+  /// has typed one over it.
+  double get wallThicknessIn => _wallThicknessOverrideIn ?? standardWallThicknessIn;
+
+  /// True while the wall is the parametric default rather than a manual entry.
+  bool get isWallStandard => _wallThicknessOverrideIn == null;
+
   /// Plan geometry every engine measures from.
   StructureSize get size => _structureShape == StructureShape.round
-      ? StructureSize.round(_structureDiameterIn)
+      ? StructureSize.round(_structureDiameterIn, wallThicknessIn: wallThicknessIn)
       : StructureSize.rectangular(
           insideWidthIn: _insideWidthIn,
           insideLengthIn: _insideLengthIn,
-          wallThicknessIn: _boxWallThicknessIn,
+          wallThicknessIn: wallThicknessIn,
         );
   BootType get defaultBoot => _defaultBoot;
   double get maxGradeRingStackIn => _maxGradeRingStackIn;
@@ -196,28 +209,40 @@ class DesignState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Resizing the interior re-derives the standard wall, which is the whole
+  // point of the parametric rules, so any manual override is dropped.
   set structureDiameterIn(double value) {
     _structureDiameterIn = value;
+    _wallThicknessOverrideIn = null;
     notifyListeners();
   }
 
   set structureShape(StructureShape value) {
     _structureShape = value;
+    _wallThicknessOverrideIn = null;
     notifyListeners();
   }
 
   set insideWidthIn(double value) {
     _insideWidthIn = value <= 0 ? 12 : value;
+    _wallThicknessOverrideIn = null;
     notifyListeners();
   }
 
   set insideLengthIn(double value) {
     _insideLengthIn = value <= 0 ? 12 : value;
+    _wallThicknessOverrideIn = null;
     notifyListeners();
   }
 
-  set boxWallThicknessIn(double value) {
-    _boxWallThicknessIn = value <= 0 ? kBoxWallThicknessIn : value;
+  set wallThicknessIn(double value) {
+    _wallThicknessOverrideIn = value <= 0 ? null : value;
+    notifyListeners();
+  }
+
+  /// Drops a manual wall entry and returns to the ASTM default.
+  void resetWallToStandard() {
+    _wallThicknessOverrideIn = null;
     notifyListeners();
   }
 
