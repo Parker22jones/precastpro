@@ -9,6 +9,7 @@ import '../models/job_spec.dart';
 import '../models/pipe_penetration.dart';
 import '../models/pipe_product.dart';
 import '../models/precast_piece.dart';
+import '../models/structure_size.dart';
 import 'bill_of_materials.dart';
 
 /// Everything the Select Precast submittal package prints.
@@ -25,8 +26,7 @@ class SubmittalData {
     this.sumpDepthIn = 0,
     required this.rimElevationFt,
     required this.invertElevationFt,
-    required this.structureDiameterIn,
-    this.wallThicknessIn = 0,
+    required this.size,
     this.floorThicknessIn = kBaseFloorThicknessIn,
     this.castingLabel = '',
     this.castingWeightLbs = 0,
@@ -50,8 +50,8 @@ class SubmittalData {
   final double sumpDepthIn;
   final double rimElevationFt;
   final double invertElevationFt;
-  final double structureDiameterIn;
-  final double wallThicknessIn;
+  /// Plan geometry of the structure: round diameter or box width x length.
+  final StructureSize size;
   final double floorThicknessIn;
   final String castingLabel;
   final double castingWeightLbs;
@@ -62,6 +62,16 @@ class SubmittalData {
   final Uint8List elevationPng;
   final Uint8List planPng;
   final DateTime generatedAt;
+
+  /// Top of the base floor slab: no opening may be built below it.
+  double get floorTopElevationFt =>
+      invertElevationFt - sumpDepthIn / 12.0 + floorThicknessIn / 12.0;
+
+  /// Invert an opening is actually built at, held up out of the floor slab.
+  double buildInvertElevationFt(PipePenetration pipe) =>
+      pipe.invertElevationFt < floorTopElevationFt
+      ? floorTopElevationFt
+      : pipe.invertElevationFt;
 
   /// Top of casting = rim elevation (the casting sits on the grade rings).
   double get topOfCastingFt => rimElevationFt;
@@ -350,8 +360,9 @@ pw.Widget _designBuildHeightTable(SubmittalData data) {
     ('Outlet Invert', "${data.invertElevationFt.toStringAsFixed(2)}'"),
     ('Sump Below Invert', '${data.sumpDepthIn.toStringAsFixed(2)}"'),
     ('Floor Thickness', '${data.floorThicknessIn.toStringAsFixed(2)}"'),
-    ('Wall Thickness', '${data.wallThicknessIn.toStringAsFixed(2)}"'),
-    ('Inside Diameter', '${data.structureDiameterIn.toStringAsFixed(0)}"'),
+    ('Wall Thickness', '${data.size.wallThicknessIn.toStringAsFixed(2)}"'),
+    ('Structure Shape', data.size.shape.label),
+    ('Inside Size', data.size.sizeLabel),
     ('Gross Design Height', '${designHeightIn.toStringAsFixed(2)}"'),
     ('Required Build Height', '${data.stack.structuralDepthIn.toStringAsFixed(2)}"'),
   ]);
@@ -440,7 +451,7 @@ pw.Widget _pipeTable(SubmittalData data) => pw.Table(
           _cell(p.product?.label ?? p.material.label),
           _cell('${p.outsideDiameterIn.toStringAsFixed(1)}"'),
           _cell('${p.holeSizeIn.toStringAsFixed(1)}"'),
-          _cell("${p.invertElevationFt.toStringAsFixed(2)}'"),
+          _cell("${data.buildInvertElevationFt(p).toStringAsFixed(2)}'"),
           _cell('${p.normalizedAngleDeg.toStringAsFixed(0)} deg'),
           _cell(p.clockPosition),
           _cell(p.psx.isSleeve ? p.psx.label : p.boot.label),

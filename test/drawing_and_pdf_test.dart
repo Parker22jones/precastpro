@@ -76,7 +76,7 @@ void main() {
           jobName: design.jobName,
           rimElevationFt: design.rimElevationFt,
           invertElevationFt: design.invertElevationFt,
-          structureDiameterIn: design.structureDiameterIn,
+          size: design.size,
           conicalTop: design.conicalTop,
           stack: design.stack,
           pipes: design.pipes,

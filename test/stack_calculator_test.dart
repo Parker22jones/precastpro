@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:precastpro/logic/stack_calculator.dart';
 import 'package:precastpro/models/precast_piece.dart';
+import 'package:precastpro/models/structure_size.dart';
 
 void main() {
   const calc = StackCalculator();
@@ -13,7 +14,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 100,
       invertElevationFt: 88.5,
-      structureDiameterIn: 48,
+      size: StructureSize.round(48),
       conicalTop: true,
     );
     expect(r.feasible, isTrue);
@@ -27,7 +28,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 104,
       invertElevationFt: 90,
-      structureDiameterIn: 60,
+      size: StructureSize.round(60),
       conicalTop: false,
     );
     expect(r.items.first.piece.type, PieceType.base);
@@ -40,7 +41,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 100.5,
       invertElevationFt: 89,
-      structureDiameterIn: 48,
+      size: StructureSize.round(48),
       conicalTop: true,
     );
     final topIndex = r.items.indexWhere(
@@ -60,7 +61,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 100 + 140 / 12,
       invertElevationFt: 100,
-      structureDiameterIn: 48,
+      size: StructureSize.round(48),
       conicalTop: true,
     );
     expect(r.isExact, isTrue);
@@ -77,7 +78,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 100 + (84 + 26 + 8) / 12,
       invertElevationFt: 100,
-      structureDiameterIn: 48,
+      size: StructureSize.round(48),
       conicalTop: true,
     );
     expect(r.isExact, isTrue);
@@ -92,7 +93,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 100 + (84 + 1 + 8) / 12,
       invertElevationFt: 100,
-      structureDiameterIn: 48,
+      size: StructureSize.round(48),
       conicalTop: true,
     );
     expect(r.isExact, isFalse);
@@ -104,7 +105,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 92,
       invertElevationFt: 90,
-      structureDiameterIn: 48,
+      size: StructureSize.round(48),
       conicalTop: true,
     );
     expect(r.feasible, isFalse);
@@ -115,7 +116,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 89,
       invertElevationFt: 90,
-      structureDiameterIn: 48,
+      size: StructureSize.round(48),
       conicalTop: true,
     );
     expect(r.feasible, isFalse);
@@ -126,7 +127,7 @@ void main() {
     final r = calc.calculate(
       rimElevationFt: 100,
       invertElevationFt: 88.5,
-      structureDiameterIn: 48,
+      size: StructureSize.round(48),
       conicalTop: true,
     );
     final expected = r.items.fold<double>(0, (s, i) => s + i.piece.weightLbs * i.count);

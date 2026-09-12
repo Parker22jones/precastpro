@@ -9,6 +9,7 @@ import '../models/job_spec.dart';
 import '../models/pipe_penetration.dart';
 import '../models/pipe_product.dart';
 import '../models/precast_piece.dart';
+import '../models/structure_size.dart';
 
 /// Everything the engineering wizard collects for a single structure, plus the
 /// derived stack, layout and spatial validation.
@@ -27,6 +28,11 @@ class DesignState extends ChangeNotifier {
     double invertElevationFt = 88.5,
     double sumpDepthIn = 0,
     double structureDiameterIn = 48,
+    StructureShape structureShape = StructureShape.round,
+    double? insideWidthIn,
+    double? insideLengthIn,
+    double boxWallThicknessIn = kBoxWallThicknessIn,
+    double baseFloorThicknessIn = kBaseFloorThicknessIn,
     bool conicalTop = true,
     BootType defaultBoot = BootType.aLok,
     double maxGradeRingStackIn = 12.0,
@@ -44,6 +50,11 @@ class DesignState extends ChangeNotifier {
        _invertElevationFt = invertElevationFt,
        _sumpDepthIn = sumpDepthIn,
        _structureDiameterIn = structureDiameterIn,
+       _structureShape = structureShape,
+       _insideWidthIn = insideWidthIn ?? 48,
+       _insideLengthIn = insideLengthIn ?? 60,
+       _boxWallThicknessIn = boxWallThicknessIn,
+       _baseFloorThicknessIn = baseFloorThicknessIn,
        _conicalTop = conicalTop,
        _defaultBoot = defaultBoot,
        _maxGradeRingStackIn = maxGradeRingStackIn,
@@ -82,6 +93,11 @@ class DesignState extends ChangeNotifier {
   double _invertElevationFt;
   double _sumpDepthIn;
   double _structureDiameterIn;
+  StructureShape _structureShape;
+  double _insideWidthIn;
+  double _insideLengthIn;
+  double _boxWallThicknessIn;
+  double _baseFloorThicknessIn;
   bool _conicalTop;
   BootType _defaultBoot;
   double _maxGradeRingStackIn;
@@ -97,7 +113,21 @@ class DesignState extends ChangeNotifier {
   double get invertElevationFt => _invertElevationFt;
   double get sumpDepthIn => _sumpDepthIn;
   double get structureDiameterIn => _structureDiameterIn;
+  StructureShape get structureShape => _structureShape;
+  double get insideWidthIn => _insideWidthIn;
+  double get insideLengthIn => _insideLengthIn;
+  double get boxWallThicknessIn => _boxWallThicknessIn;
+  double get baseFloorThicknessIn => _baseFloorThicknessIn;
   bool get conicalTop => _conicalTop;
+
+  /// Plan geometry every engine measures from.
+  StructureSize get size => _structureShape == StructureShape.round
+      ? StructureSize.round(_structureDiameterIn)
+      : StructureSize.rectangular(
+          insideWidthIn: _insideWidthIn,
+          insideLengthIn: _insideLengthIn,
+          wallThicknessIn: _boxWallThicknessIn,
+        );
   BootType get defaultBoot => _defaultBoot;
   double get maxGradeRingStackIn => _maxGradeRingStackIn;
   int get stepCount => _stepCount;
@@ -171,6 +201,31 @@ class DesignState extends ChangeNotifier {
     notifyListeners();
   }
 
+  set structureShape(StructureShape value) {
+    _structureShape = value;
+    notifyListeners();
+  }
+
+  set insideWidthIn(double value) {
+    _insideWidthIn = value <= 0 ? 12 : value;
+    notifyListeners();
+  }
+
+  set insideLengthIn(double value) {
+    _insideLengthIn = value <= 0 ? 12 : value;
+    notifyListeners();
+  }
+
+  set boxWallThicknessIn(double value) {
+    _boxWallThicknessIn = value <= 0 ? kBoxWallThicknessIn : value;
+    notifyListeners();
+  }
+
+  set baseFloorThicknessIn(double value) {
+    _baseFloorThicknessIn = value <= 0 ? kBaseFloorThicknessIn : value;
+    notifyListeners();
+  }
+
   set conicalTop(bool value) {
     _conicalTop = value;
     notifyListeners();
@@ -223,26 +278,28 @@ class DesignState extends ChangeNotifier {
   StackResult get stack => const StackCalculator().calculate(
     rimElevationFt: _rimElevationFt,
     invertElevationFt: _invertElevationFt,
-    structureDiameterIn: _structureDiameterIn,
+    size: size,
     conicalTop: _conicalTop,
     sumpDepthIn: _sumpDepthIn,
     maxGradeRingStackIn: _maxGradeRingStackIn,
+    baseFloorThicknessIn: _baseFloorThicknessIn,
   );
 
   StructureLayout get layout => StructureLayout(
     stack: stack,
     rimElevationFt: _rimElevationFt,
     invertElevationFt: _invertElevationFt,
-    structureDiameterIn: _structureDiameterIn,
+    size: size,
     sumpDepthIn: _sumpDepthIn,
+    baseFloorThicknessIn: _baseFloorThicknessIn,
   );
 
   ValidationReport get validation => const PipeValidator().validate(
     pipes: _pipes,
-    structureInsideDiameterIn: _structureDiameterIn,
-    wallThicknessIn: PieceCatalog.base(_structureDiameterIn).wallThicknessIn,
+    size: size,
     rimElevationFt: _rimElevationFt,
     invertElevationFt: _invertElevationFt,
+    floorTopElevationFt: layout.floorTopElevationFt,
   );
 
   /// Names of pipes involved in at least one conflict.
@@ -320,7 +377,8 @@ class DesignState extends ChangeNotifier {
   }
 
   static String _skuForPiece(PrecastPiece piece) => switch (piece.type) {
-    PieceType.riser => 'R${piece.insideDiameterIn.toStringAsFixed(0)}',
+    PieceType.riser when !piece.isRectangular =>
+      'R${piece.insideDiameterIn.toStringAsFixed(0)}',
     PieceType.gradeRing => 'GR',
     _ => piece.id,
   };

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:precastpro/logic/pipe_validator.dart';
 import 'package:precastpro/models/pipe_penetration.dart';
+import 'package:precastpro/models/structure_size.dart';
 
 PipePenetration pipe(String name, double od, double inv, double angle) => PipePenetration(
   name: name,
@@ -15,7 +16,15 @@ void main() {
   const validator = PipeValidator();
 
   ValidationReport check(List<PipePenetration> pipes, {double id = 48, double wall = 5}) =>
-      validator.validate(pipes: pipes, structureInsideDiameterIn: id, wallThicknessIn: wall);
+      validator.validate(
+        pipes: pipes,
+        size: StructureSize(
+          shape: StructureShape.round,
+          insideWidthIn: id,
+          insideLengthIn: id,
+          wallThicknessIn: wall,
+        ),
+      );
 
   test('opposing pipes are clear', () {
     final r = check([pipe('IN', 12, 90, 0), pipe('OUT', 12, 89.8, 180)]);
@@ -84,8 +93,7 @@ void main() {
   test('pipe outside the rim/invert envelope is reported', () {
     final r = validator.validate(
       pipes: [pipe('LOW', 12, 85, 0), pipe('HIGH', 12, 99.9, 180)],
-      structureInsideDiameterIn: 48,
-      wallThicknessIn: 5,
+      size: StructureSize.round(48),
       rimElevationFt: 100,
       invertElevationFt: 88,
     );

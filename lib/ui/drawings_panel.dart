@@ -112,8 +112,7 @@ ElevationPainter buildElevationPainter(
 
 PlanPainter buildPlanPainter(DesignState design, {CadPalette palette = CadPalette.light}) =>
     PlanPainter(
-      insideDiameterIn: design.structureDiameterIn,
-      wallThicknessIn: design.layout.wallThicknessIn,
+      size: design.size,
       pipes: design.pipes,
       conflictedPipes: design.conflictedPipeNames,
       topOpeningDiameterIn: design.casting.clearOpeningIn,

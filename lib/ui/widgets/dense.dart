@@ -337,3 +337,18 @@ class StatusChip extends StatelessWidget {
 }
 
 double? parseNum(String raw) => double.tryParse(raw.trim());
+
+/// Parses a dimension typed the way the shop writes it: plain inches (`48`,
+/// `48"`), feet (`4'`), or feet and inches (`4'6`, `4' 6"`). Returns inches.
+double? parseFeetInches(String raw) {
+  final text = raw.trim().replaceAll('"', '').replaceAll('\u201D', '');
+  if (text.isEmpty) return null;
+  final foot = text.indexOf("'");
+  if (foot < 0) return double.tryParse(text);
+  final feet = double.tryParse(text.substring(0, foot).trim());
+  if (feet == null) return null;
+  final rest = text.substring(foot + 1).trim();
+  final inches = rest.isEmpty ? 0.0 : double.tryParse(rest);
+  if (inches == null) return null;
+  return feet * 12 + inches;
+}

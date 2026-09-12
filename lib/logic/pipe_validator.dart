@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../models/pipe_penetration.dart';
 import '../models/precast_piece.dart';
+import '../models/structure_size.dart';
 
 enum ConflictSeverity { warning, critical }
 
@@ -41,7 +42,7 @@ class ValidationReport {
   bool get isClear => !hasWarning;
 }
 
-/// Spatial safety checks for pipe penetrations in a round structure.
+/// Spatial safety checks for pipe penetrations in a round or box structure.
 class PipeValidator {
   const PipeValidator({this.minClearanceIn = kMinPipeClearanceIn});
 
@@ -49,16 +50,15 @@ class PipeValidator {
 
   ValidationReport validate({
     required List<PipePenetration> pipes,
-    required double structureInsideDiameterIn,
-    required double wallThicknessIn,
+    required StructureSize size,
     double? rimElevationFt,
     double? invertElevationFt,
+    double? floorTopElevationFt,
   }) {
     final conflicts = <PipeConflict>[];
     final notices = <String>[];
 
-    final midRadius = structureInsideDiameterIn / 2 + wallThicknessIn / 2;
-    final maxOpening = structureInsideDiameterIn * 0.75;
+    final maxOpening = size.maxOpeningIn;
 
     for (final p in pipes) {
       if (p.outsideDiameterIn <= 0) {
@@ -66,10 +66,15 @@ class PipeValidator {
       } else if (p.outsideDiameterIn > maxOpening) {
         notices.add(
           '${p.name}: ${p.outsideDiameterIn.toStringAsFixed(1)}" OD exceeds 75% of the '
-          '${structureInsideDiameterIn.toStringAsFixed(0)}" structure ID - use a larger structure or a doghouse base.',
+          '${size.sizeLabel} structure - use a larger structure or a doghouse base.',
         );
       }
-      if (invertElevationFt != null && p.invertElevationFt < invertElevationFt - 0.01) {
+      if (floorTopElevationFt != null && p.invertElevationFt < floorTopElevationFt - 0.001) {
+        notices.add(
+          '${p.name}: invert ${p.invertElevationFt.toStringAsFixed(2)} is below the top of the '
+          'base floor (${floorTopElevationFt.toStringAsFixed(2)}) - opening raised flush with the slab.',
+        );
+      } else if (invertElevationFt != null && p.invertElevationFt < invertElevationFt - 0.01) {
         notices.add('${p.name}: invert is below the structure invert elevation.');
       }
       if (rimElevationFt != null &&
@@ -83,10 +88,8 @@ class PipeValidator {
         final a = pipes[i];
         final b = pipes[j];
 
-        var delta = (a.normalizedAngleDeg - b.normalizedAngleDeg).abs();
-        if (delta > 180) delta = 360 - delta;
-        final arcDistance = midRadius * delta * math.pi / 180.0;
-        final horizontalClear = arcDistance - (a.outsideDiameterIn + b.outsideDiameterIn) / 2;
+        final horizontalClear =
+            _wallDistanceIn(size, a, b) - (a.outsideDiameterIn + b.outsideDiameterIn) / 2;
 
         final verticalCenterDistance =
             (a.centerlineElevationFt - b.centerlineElevationFt).abs() * 12.0;
@@ -119,5 +122,21 @@ class PipeValidator {
     }
 
     return ValidationReport(conflicts: conflicts, notices: notices);
+  }
+
+  /// Distance between two openings measured on the wall surface: along the
+  /// circumference of a round barrel, straight across the faces of a box.
+  double _wallDistanceIn(StructureSize size, PipePenetration a, PipePenetration b) {
+    if (size.isRound) {
+      var delta = (a.normalizedAngleDeg - b.normalizedAngleDeg).abs();
+      if (delta > 180) delta = 360 - delta;
+      final midRadius = size.insideDiameterIn / 2 + size.wallThicknessIn / 2;
+      return midRadius * delta * math.pi / 180.0;
+    }
+    final pa = size.wallPoint(a.normalizedAngleDeg);
+    final pb = size.wallPoint(b.normalizedAngleDeg);
+    return math.sqrt(
+      math.pow(pa.eastIn - pb.eastIn, 2) + math.pow(pa.northIn - pb.northIn, 2),
+    );
   }
 }

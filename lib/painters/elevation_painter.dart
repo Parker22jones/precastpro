@@ -42,6 +42,10 @@ class ElevationPainter extends CustomPainter {
   /// How far a pipe stub runs outside the wall, in inches.
   static const double _pipeStubIn = 10;
 
+  /// Diameter symbol on round structures; box dimensions read plain.
+  String _across(double inches) =>
+      layout.isRound ? '${inchesText(inches)}\u00F8' : inchesText(inches);
+
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = palette.paper);
@@ -274,7 +278,7 @@ class ElevationPainter extends CustomPainter {
     drawDimensionLine(canvas, Offset(chainX, floorTop), Offset(chainX, floorBottom), color, head: 4);
     labels.draw(
       canvas,
-      inchesText(kBaseFloorThicknessIn),
+      inchesText(layout.baseFloorThicknessIn),
       Offset(chainX - 6, (floorTop + floorBottom) / 2 - 4.5),
       8.5,
       align: LabelAnchor.right,
@@ -354,7 +358,7 @@ class ElevationPainter extends CustomPainter {
         x(-halfIn),
         x(halfIn),
         dimY,
-        '${inchesText(halfIn * 2)}\u00F8',
+        _across(halfIn * 2),
         color,
       );
       _widthSegment(canvas, labels, x(halfIn), x(halfOut), dimY, inchesText(halfOut - halfIn), color);
@@ -375,7 +379,7 @@ class ElevationPainter extends CustomPainter {
       x(-halfIn),
       x(halfIn),
       dimY,
-      '${inchesText(layout.structureDiameterIn)}\u00F8',
+      _across(layout.structureDiameterIn),
       color,
     );
     _widthSegment(canvas, labels, x(halfIn), x(halfOut), dimY, inchesText(layout.wallThicknessIn), color);
@@ -385,9 +389,20 @@ class ElevationPainter extends CustomPainter {
       x(-halfOut),
       x(halfOut),
       dimY + 16,
-      '${inchesText(layout.outsideDiameterIn)}\u00F8',
+      _across(layout.outsideDiameterIn),
       color,
     );
+    if (!layout.isRound) {
+      // The section only shows the width, so the depth is called out in text.
+      labels.draw(
+        canvas,
+        '${inchesText(layout.size.insideLengthIn)}" DEEP (N-S)',
+        Offset(x(0), dimY + 30),
+        8.5,
+        align: LabelAnchor.center,
+        color: color,
+      );
+    }
   }
 
   void _widthSegment(
@@ -451,7 +466,8 @@ class ElevationPainter extends CustomPainter {
 
   /// Horizontal offset of a penetration projected onto the section plane.
   double _projectedOffsetIn(PipePenetration pipe) =>
-      math.sin(pipe.angleRadFromNorthClockwise) * (layout.outsideDiameterIn / 2);
+      math.sin(pipe.angleRadFromNorthClockwise) *
+      layout.size.outsideReachIn(pipe.normalizedAngleDeg);
 
   bool _breaksWall(PipePenetration pipe) =>
       _projectedOffsetIn(pipe).abs() >= layout.structureDiameterIn / 2 - 0.01;
@@ -459,7 +475,7 @@ class ElevationPainter extends CustomPainter {
   void _reservePipeZones(LabelPlacer labels, _Geometry g, _Map x, _Map y) {
     for (final pipe in pipes) {
       final half = pipe.holeSizeIn / 2 / 12;
-      final center = pipe.invertElevationFt + pipe.outsideDiameterIn / 24;
+      final center = layout.buildInvertElevationFt(pipe) + pipe.outsideDiameterIn / 24;
       final offset = _projectedOffsetIn(pipe);
       final left = _breaksWall(pipe)
           ? (offset > 0 ? x(layout.structureDiameterIn / 2) : x(-layout.outsideDiameterIn / 2 - _pipeStubIn))
@@ -493,8 +509,10 @@ class ElevationPainter extends CustomPainter {
       final holeColor = conflicted ? palette.conflict : palette.hole;
       final offset = _projectedOffsetIn(pipe);
       final onRight = offset >= 0;
-      final yInvert = y(pipe.invertElevationFt);
-      final yCrown = y(pipe.invertElevationFt + pipe.outsideDiameterIn / 12);
+      // Shop rule: the bottom of the opening never breaks into the floor slab.
+      final invertFt = layout.buildInvertElevationFt(pipe);
+      final yInvert = y(invertFt);
+      final yCrown = y(invertFt + pipe.outsideDiameterIn / 12);
       Offset leaderFrom;
 
       if (_breaksWall(pipe)) {
@@ -504,7 +522,7 @@ class ElevationPainter extends CustomPainter {
         final outer = x(sign * (layout.outsideDiameterIn / 2 + _pipeStubIn));
         final wallFace = x(sign * layout.outsideDiameterIn / 2);
         final holeHalf = pipe.holeSizeIn / 2 / 12;
-        final centerElev = pipe.invertElevationFt + pipe.outsideDiameterIn / 24;
+        final centerElev = invertFt + pipe.outsideDiameterIn / 24;
 
         // Cored opening through the wall, dashed like the shop drawings.
         for (final elev in [centerElev - holeHalf, centerElev + holeHalf]) {
@@ -561,7 +579,8 @@ class ElevationPainter extends CustomPainter {
       final rect = labels.draw(
         canvas,
         '${pipe.name}  ${inchesText(pipe.outsideDiameterIn)}" OD\n'
-        'INV ${pipe.invertElevationFt.toStringAsFixed(2)}  '
+        'INV ${invertFt.toStringAsFixed(2)}'
+        '${layout.isInvertRaised(pipe) ? ' (SET ON FLOOR)' : ''}  '
         '${pipe.normalizedAngleDeg.toStringAsFixed(0)}\u00B0'
         '${_breaksWall(pipe) ? '' : (pipe.normalizedAngleDeg < 90 || pipe.normalizedAngleDeg > 270 ? '  (FAR SIDE)' : '  (NEAR SIDE)')}',
         Offset(

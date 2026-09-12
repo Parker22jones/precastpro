@@ -1,4 +1,5 @@
 import '../models/precast_piece.dart';
+import '../models/structure_size.dart';
 
 /// One line of the resulting stack, ordered bottom (index 0) to top.
 class StackItem {
@@ -56,23 +57,26 @@ class StackCalculator {
     required double rimElevationFt,
     required double invertElevationFt,
     double sumpDepthIn = 0,
-  }) => (rimElevationFt - invertElevationFt) * 12.0 + sumpDepthIn - kBaseFloorThicknessIn;
+    double baseFloorThicknessIn = kBaseFloorThicknessIn,
+  }) => (rimElevationFt - invertElevationFt) * 12.0 + sumpDepthIn - baseFloorThicknessIn;
 
   /// Builds the stack that reaches [rimElevationFt] exactly while using the
   /// fewest possible pieces (and therefore the fewest horizontal joints).
   StackResult calculate({
     required double rimElevationFt,
     required double invertElevationFt,
-    required double structureDiameterIn,
+    required StructureSize size,
     required bool conicalTop,
     double sumpDepthIn = 0,
     double maxGradeRingStackIn = 12.0,
+    double baseFloorThicknessIn = kBaseFloorThicknessIn,
   }) {
     final messages = <String>[];
     final depth = structuralDepthIn(
       rimElevationFt: rimElevationFt,
       invertElevationFt: invertElevationFt,
       sumpDepthIn: sumpDepthIn,
+      baseFloorThicknessIn: baseFloorThicknessIn,
     );
 
     if (depth <= 0) {
@@ -81,15 +85,20 @@ class StackCalculator {
         structuralDepthIn: depth,
         achievedHeightIn: 0,
         residualIn: depth,
-        messages: const [
-          'Rim elevation must be above the invert elevation by more than the 8" base floor.',
+        messages: [
+          'Rim elevation must be above the invert elevation by more than the '
+              '${baseFloorThicknessIn.toStringAsFixed(0)}" base floor.',
         ],
         feasible: false,
       );
     }
 
-    final base = PieceCatalog.base(structureDiameterIn);
-    final top = PieceCatalog.top(structureDiameterIn, conical: conicalTop);
+    final set = PieceCatalog.forSize(size);
+    final base = set.base;
+    final top = set.top(conical: conicalTop);
+    if (conicalTop && !set.hasConicalTop) {
+      messages.add('Box structures have no conical form - stacked with a ${top.description}.');
+    }
     final fixedHeight = base.heightIn + top.heightIn;
 
     if (depth < fixedHeight) {
@@ -113,8 +122,8 @@ class StackCalculator {
     final remaining = depth - fixedHeight;
     final fill = _bestFill(
       targetIn: remaining,
-      risers: PieceCatalog.risers(structureDiameterIn),
-      gradeRings: PieceCatalog.gradeRings(),
+      risers: set.risers,
+      gradeRings: set.gradeRings,
       maxGradeRingStackIn: maxGradeRingStackIn,
     );
 
