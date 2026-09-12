@@ -50,13 +50,14 @@ class StackResult {
 class StackCalculator {
   const StackCalculator();
 
-  /// Structural depth per the shop standard: rim minus invert minus the 8"
-  /// base floor slab.
+  /// Structural depth per the shop standard: rim minus invert, plus any sump
+  /// carried below the outlet invert, minus the 8" base floor slab.
   static double structuralDepthIn({
     required double rimElevationFt,
     required double invertElevationFt,
+    double sumpDepthIn = 0,
   }) =>
-      (rimElevationFt - invertElevationFt) * 12.0 - kBaseFloorThicknessIn;
+      (rimElevationFt - invertElevationFt) * 12.0 + sumpDepthIn - kBaseFloorThicknessIn;
 
   /// Builds the stack that reaches [rimElevationFt] exactly while using the
   /// fewest possible pieces (and therefore the fewest horizontal joints).
@@ -65,12 +66,14 @@ class StackCalculator {
     required double invertElevationFt,
     required double structureDiameterIn,
     required bool conicalTop,
+    double sumpDepthIn = 0,
     double maxGradeRingStackIn = 12.0,
   }) {
     final messages = <String>[];
     final depth = structuralDepthIn(
       rimElevationFt: rimElevationFt,
       invertElevationFt: invertElevationFt,
+      sumpDepthIn: sumpDepthIn,
     );
 
     if (depth <= 0) {

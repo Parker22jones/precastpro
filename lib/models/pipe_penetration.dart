@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'job_spec.dart';
+
 /// A single pipe entering or leaving the structure.
 class PipePenetration {
   PipePenetration({
@@ -7,9 +9,21 @@ class PipePenetration {
     required this.outsideDiameterIn,
     required this.invertElevationFt,
     required this.horizontalAngleDeg,
-  });
+    this.material = PipeMaterial.pvc,
+    this.boot = BootType.aLok,
+    double? holeSizeIn,
+  }) : holeSizeIn = holeSizeIn ?? outsideDiameterIn + 4;
 
   String name;
+
+  /// Pipe material called out on the schedule.
+  PipeMaterial material;
+
+  /// Connector cast into the wall for this penetration.
+  BootType boot;
+
+  /// Cored / cast hole diameter, in inches.
+  double holeSizeIn;
 
   /// Outside diameter of the pipe, in inches.
   double outsideDiameterIn;
@@ -40,10 +54,20 @@ class PipePenetration {
     return '$hour:${minute.toString().padLeft(2, '0')}';
   }
 
+  /// Hole centre coordinates on the structure wall, in inches east/north of
+  /// the structure centre, for the given wall radius.
+  ({double eastIn, double northIn}) holeCoordinates(double radiusIn) => (
+        eastIn: radiusIn * math.sin(angleRadFromNorthClockwise),
+        northIn: radiusIn * math.cos(angleRadFromNorthClockwise),
+      );
+
   PipePenetration copy() => PipePenetration(
         name: name,
         outsideDiameterIn: outsideDiameterIn,
         invertElevationFt: invertElevationFt,
         horizontalAngleDeg: horizontalAngleDeg,
+        material: material,
+        boot: boot,
+        holeSizeIn: holeSizeIn,
       );
 }

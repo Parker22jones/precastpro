@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
 
-import 'state/design_state.dart';
-import 'ui/home_page.dart';
+import 'state/app_state.dart';
+import 'ui/app_scope.dart';
+import 'ui/app_shell.dart';
+import 'ui/mh_theme.dart';
 
 void main() {
-  runApp(PrecastProApp(design: DesignState()));
+  runApp(PrecastProApp(state: AppState()));
 }
 
 class PrecastProApp extends StatelessWidget {
-  const PrecastProApp({super.key, required this.design});
+  const PrecastProApp({super.key, required this.state});
 
-  final DesignState design;
+  final AppState state;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PrecastPro',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B3A57)),
-        useMaterial3: true,
-        cardTheme: const CardThemeData(elevation: 1, margin: EdgeInsets.zero),
-        inputDecorationTheme: const InputDecorationTheme(filled: false),
+    return AppScope(
+      state: state,
+      child: MaterialApp(
+        title: 'PrecastPro',
+        debugShowCheckedModeBanner: false,
+        theme: Mh.themeData(),
+        home: const AppShell(),
       ),
-      home: HomePage(design: design),
     );
   }
 }

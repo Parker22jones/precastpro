@@ -5,12 +5,18 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../logic/pipe_validator.dart';
 import '../logic/stack_calculator.dart';
+import '../models/job_spec.dart';
 import '../models/pipe_penetration.dart';
 import 'bill_of_materials.dart';
 
 class SubmittalData {
   const SubmittalData({
     required this.jobName,
+    this.structureMark = '',
+    this.customer = '',
+    this.structureTypeLabel = '',
+    this.castDate,
+    this.sumpDepthIn = 0,
     required this.rimElevationFt,
     required this.invertElevationFt,
     required this.structureDiameterIn,
@@ -24,6 +30,11 @@ class SubmittalData {
   });
 
   final String jobName;
+  final String structureMark;
+  final String customer;
+  final String structureTypeLabel;
+  final DateTime? castDate;
+  final double sumpDepthIn;
   final double rimElevationFt;
   final double invertElevationFt;
   final double structureDiameterIn;
@@ -134,11 +145,19 @@ Future<Uint8List> buildSubmittalPdf(SubmittalData data) async {
                   child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
                     _sectionTitle('STRUCTURE DATA', accent),
                     pw.SizedBox(height: 4),
-                    infoRow('Job / Structure', data.jobName),
+                    infoRow('Job / Structure',
+                        [data.jobName, if (data.structureMark.isNotEmpty) data.structureMark]
+                            .join(' / ')),
+                    if (data.customer.isNotEmpty) infoRow('Customer', data.customer),
+                    if (data.structureTypeLabel.isNotEmpty)
+                      infoRow('Structure Type', data.structureTypeLabel),
+                    if (data.castDate != null) infoRow('Cast Date', _formatDate(data.castDate!)),
                     infoRow('Structure Size', '${data.structureDiameterIn.toStringAsFixed(0)}" I.D.'),
                     infoRow('Top Type', data.conicalTop ? 'Conical (eccentric)' : 'Flat top slab'),
                     infoRow('Rim Elevation', "${data.rimElevationFt.toStringAsFixed(2)}'"),
                     infoRow('Invert Elevation', "${data.invertElevationFt.toStringAsFixed(2)}'"),
+                    if (data.sumpDepthIn > 0)
+                      infoRow('Sump Depth', '${data.sumpDepthIn.toStringAsFixed(1)}" below invert'),
                     infoRow('Structural Depth',
                         '${data.stack.structuralDepthIn.toStringAsFixed(2)}" (rim - invert - 8" floor)'),
                     infoRow('Stack Height', '${data.stack.achievedHeightIn.toStringAsFixed(2)}"'),
@@ -199,19 +218,25 @@ Future<Uint8List> buildSubmittalPdf(SubmittalData data) async {
                           decoration: const pw.BoxDecoration(color: light),
                           children: [
                             cell('PIPE', bold: true),
+                            cell('TYPE', bold: true),
                             cell('O.D.', bold: true),
+                            cell('HOLE', bold: true),
                             cell('INVERT', bold: true),
                             cell('ANGLE CW', bold: true),
                             cell('CLOCK', bold: true),
+                            cell('BOOT', bold: true),
                           ],
                         ),
                         for (final p in data.pipes)
                           pw.TableRow(children: [
                             cell(p.name),
+                            cell(p.material.label),
                             cell('${p.outsideDiameterIn.toStringAsFixed(1)}"'),
+                            cell('${p.holeSizeIn.toStringAsFixed(1)}"'),
                             cell("${p.invertElevationFt.toStringAsFixed(2)}'"),
                             cell('${p.normalizedAngleDeg.toStringAsFixed(0)} deg'),
                             cell(p.clockPosition),
+                            cell(p.boot.label),
                           ]),
                       ],
                     ),
