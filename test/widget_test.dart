@@ -73,8 +73,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('structural details report the grade rings the stack actually uses',
-      (tester) async {
+  testWidgets('structural details report the grade rings the stack actually uses', (tester) async {
     final design = DesignState(rimElevationFt: 101, invertElevationFt: 88, sumpDepthIn: 6);
     final rings = design.stack.items
         .where((i) => i.piece.type == PieceType.gradeRing)

@@ -24,7 +24,8 @@ class LabelPlacer {
   /// as occupied so later annotations are nudged clear of it.
   void reserve(Rect rect) => _placed.add(rect);
 
-  void draw(
+  /// Draws [text] and returns the rectangle it finally occupies.
+  Rect draw(
     Canvas canvas,
     String text,
     Offset anchor,
@@ -33,6 +34,7 @@ class LabelPlacer {
     bool bold = false,
     Color color = Colors.black,
     bool avoidOverlap = true,
+    double? maxWidth,
   }) {
     final span = TextSpan(
       text: text,
@@ -45,7 +47,10 @@ class LabelPlacer {
     final measured = TextPainter(text: span, textDirection: TextDirection.ltr)..layout();
     // Lay the final painter out at its intrinsic width — capped to the canvas so
     // long annotations wrap instead of running off a narrow drawing.
-    final width = math.min(measured.width, math.max(24.0, size.width - 2 * _padding));
+    final width = math.min(
+      measured.width,
+      math.min(maxWidth ?? double.infinity, math.max(24.0, size.width - 2 * _padding)),
+    );
     final painter = TextPainter(
       text: span,
       textDirection: TextDirection.ltr,
@@ -66,6 +71,7 @@ class LabelPlacer {
 
     painter.paint(canvas, rect.topLeft);
     _placed.add(rect);
+    return rect;
   }
 
   /// Rectangle covering a line segment, inflated by [pad].

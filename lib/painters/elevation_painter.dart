@@ -40,7 +40,7 @@ class ElevationPainter extends CustomPainter {
 
     const marginTop = 38.0;
     const marginBottom = 34.0;
-    const marginLeft = 124.0;
+    const marginLeft = 150.0;
     const marginRight = 152.0;
 
     final drawH = math.max(size.height - marginTop - marginBottom, 20.0);
@@ -151,7 +151,7 @@ class ElevationPainter extends CustomPainter {
       }
 
       // Piece height dimension, left of the structure.
-      final dimX = marginLeft - 30;
+      final dimX = marginLeft - 34;
       if ((bottom - top).abs() > 13) {
         drawExtensionLine(canvas, Offset(x(-halfOut), top), Offset(dimX - 4, top), palette.thinInk);
         drawExtensionLine(
@@ -202,7 +202,7 @@ class ElevationPainter extends CustomPainter {
 
     // Overall structural depth dimension, far left, labelled above the string
     // so it never collides with the per-piece dimensions.
-    final overallX = marginLeft - 100;
+    final overallX = 14.0;
     final yTopStack = y(layout.topOfStackElevationFt);
     final yBottom = y(layout.floorBottomElevationFt);
     drawDimensionLine(
@@ -250,7 +250,7 @@ class ElevationPainter extends CustomPainter {
 
     // Pipe penetrations.
     for (final pipe in pipes) {
-      final onRight = pipe.normalizedAngleDeg <= 180;
+      final onRight = pipe.normalizedAngleDeg < 180;
       final conflicted = conflictedPipes.contains(pipe.name);
       final color = conflicted ? palette.conflict : palette.pipe;
       final yInv = y(pipe.invertElevationFt);
@@ -274,15 +274,22 @@ class ElevationPainter extends CustomPainter {
         _stroke(color, 1.0),
       );
 
-      labels.draw(
+      // Callout sits in the sheet margin with a leader back to the opening.
+      final rect = labels.draw(
         canvas,
         '${pipe.name} ${pipe.outsideDiameterIn.toStringAsFixed(1)}" OD ${pipe.material.label}\n'
         'INV ${pipe.invertElevationFt.toStringAsFixed(2)}  '
         '${pipe.normalizedAngleDeg.toStringAsFixed(0)}\u00B0 FROM NORTH (${pipe.clockPosition})',
-        Offset(onRight ? outX + 6 : outX - 6, (yCrown + yInv) / 2 - 12),
+        Offset(onRight ? size.width - marginRight + 8 : marginLeft - 56, (yCrown + yInv) / 2 - 12),
         8.5,
         align: onRight ? LabelAnchor.left : LabelAnchor.right,
         color: color,
+        maxWidth: 90,
+      );
+      canvas.drawLine(
+        Offset(onRight ? pipeRect.right : pipeRect.left, pipeRect.center.dy),
+        Offset(onRight ? rect.left - 4 : rect.right + 4, rect.center.dy),
+        _stroke(color, 0.8),
       );
     }
 

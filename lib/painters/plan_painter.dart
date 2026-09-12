@@ -161,25 +161,31 @@ class PlanPainter extends CustomPainter {
       // Angular callout: arc from North to the pipe heading.
       _angleArc(canvas, center, r(outsideRadiusIn) * 0.55, angle, palette.dimension);
 
+      // Callouts live in the sheet margin beside the barrel, tied back to the
+      // opening with a leader, so no annotation ever crosses the structure.
       final holeCoords = pipe.holeCoordinates(outsideRadiusIn);
-      final labelPt = pt(angle, outsideRadiusIn + 32);
-      final dx = labelPt.dx - center.dx;
-      final align = dx.abs() < r(outsideRadiusIn) * 0.35
-          ? LabelAnchor.center
-          : dx < 0
-          ? LabelAnchor.right
-          : LabelAnchor.left;
-      labels.draw(
+      final outer = pt(angle, outsideRadiusIn + 18);
+      final onRight = angle < 180;
+      final barrelR = r(outsideRadiusIn);
+      final labelPt = Offset(
+        onRight ? center.dx + barrelR + 18 : center.dx - barrelR - 18,
+        outer.dy - 14,
+      );
+      final align = onRight ? LabelAnchor.left : LabelAnchor.right;
+      final rect = labels.draw(
         canvas,
         '${pipe.name}  ${pipe.material.label}\n'
         '${angle.toStringAsFixed(0)}\u00B0 CW FROM N (${pipe.clockPosition})\n'
         'HOLE \u00D8${pipe.holeSizeIn.toStringAsFixed(1)}"  '
         'E${holeCoords.eastIn.toStringAsFixed(1)} N${holeCoords.northIn.toStringAsFixed(1)}',
-        labelPt - const Offset(0, 12),
+        labelPt,
         8.5,
         align: align,
         color: color,
+        maxWidth: math.max(70, center.dx - barrelR - 24),
       );
+      final leaderEnd = Offset(onRight ? rect.left - 4 : rect.right + 4, rect.center.dy);
+      canvas.drawLine(outer, leaderEnd, _stroke(color, 0.8));
     }
 
     if (conflictedPipes.isNotEmpty) {
