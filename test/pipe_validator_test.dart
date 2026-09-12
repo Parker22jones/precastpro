@@ -3,19 +3,28 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:precastpro/logic/pipe_validator.dart';
 import 'package:precastpro/models/pipe_penetration.dart';
+import 'package:precastpro/models/structure_size.dart';
 
 PipePenetration pipe(String name, double od, double inv, double angle) => PipePenetration(
-      name: name,
-      outsideDiameterIn: od,
-      invertElevationFt: inv,
-      horizontalAngleDeg: angle,
-    );
+  name: name,
+  outsideDiameterIn: od,
+  invertElevationFt: inv,
+  horizontalAngleDeg: angle,
+);
 
 void main() {
   const validator = PipeValidator();
 
   ValidationReport check(List<PipePenetration> pipes, {double id = 48, double wall = 5}) =>
-      validator.validate(pipes: pipes, structureInsideDiameterIn: id, wallThicknessIn: wall);
+      validator.validate(
+        pipes: pipes,
+        size: StructureSize(
+          shape: StructureShape.round,
+          insideWidthIn: id,
+          insideLengthIn: id,
+          wallThicknessIn: wall,
+        ),
+      );
 
   test('opposing pipes are clear', () {
     final r = check([pipe('IN', 12, 90, 0), pipe('OUT', 12, 89.8, 180)]);
@@ -47,7 +56,10 @@ void main() {
     // are exactly 6" clear when their arc distance is 18".
     final thresholdDeg = (18.0 / 26.5) * 180 / math.pi;
 
-    expect(check([pipe('A', 12, 90, 0), pipe('B', 12, 90, thresholdDeg + 0.05)]).conflicts, isEmpty);
+    expect(
+      check([pipe('A', 12, 90, 0), pipe('B', 12, 90, thresholdDeg + 0.05)]).conflicts,
+      isEmpty,
+    );
 
     final tight = check([pipe('A', 12, 90, 0), pipe('B', 12, 90, thresholdDeg - 1)]);
     expect(tight.conflicts, hasLength(1));
@@ -68,11 +80,7 @@ void main() {
   });
 
   test('three pipes report every offending pair', () {
-    final r = check([
-      pipe('A', 18, 90, 0),
-      pipe('B', 18, 90, 8),
-      pipe('C', 18, 90, 16),
-    ]);
+    final r = check([pipe('A', 18, 90, 0), pipe('B', 18, 90, 8), pipe('C', 18, 90, 16)]);
     expect(r.conflicts.length, 3);
   });
 
@@ -85,8 +93,7 @@ void main() {
   test('pipe outside the rim/invert envelope is reported', () {
     final r = validator.validate(
       pipes: [pipe('LOW', 12, 85, 0), pipe('HIGH', 12, 99.9, 180)],
-      structureInsideDiameterIn: 48,
-      wallThicknessIn: 5,
+      size: StructureSize.round(48),
       rimElevationFt: 100,
       invertElevationFt: 88,
     );

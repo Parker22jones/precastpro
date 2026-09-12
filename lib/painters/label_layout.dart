@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'cad_palette.dart';
+
 /// Horizontal anchoring of a drawing annotation relative to its anchor point.
 enum LabelAnchor { left, right, center }
 
@@ -17,10 +19,20 @@ class LabelPlacer {
   final Size size;
   final List<Rect> _placed = <Rect>[];
 
-  static const double _padding = 2.0;
+  static const double _padding = 7.0;
   static const double _spacing = 2.0;
 
-  void draw(
+  /// Bands at the top and bottom of the sheet reserved for the title bar and
+  /// the footer note; no annotation is allowed to sit inside them.
+  double topGuard = 0;
+  double bottomGuard = 0;
+
+  /// Marks an area of the canvas (a dimension line, a north arrow, a leader)
+  /// as occupied so later annotations are nudged clear of it.
+  void reserve(Rect rect) => _placed.add(rect);
+
+  /// Draws [text] and returns the rectangle it finally occupies.
+  Rect draw(
     Canvas canvas,
     String text,
     Offset anchor,
@@ -29,27 +41,25 @@ class LabelPlacer {
     bool bold = false,
     Color color = Colors.black,
     bool avoidOverlap = true,
+    double? maxWidth,
+    bool insideGuards = true,
   }) {
-    final span = TextSpan(
-      text: text,
-      style: TextStyle(
-        fontSize: fontSize,
-        color: color,
-        fontWeight: bold ? FontWeight.bold : FontWeight.w500,
-      ),
-    );
+    final span = TextSpan(text: text, style: cadLabelStyle(fontSize, color, bold: bold));
     final measured = TextPainter(text: span, textDirection: TextDirection.ltr)..layout();
     // Lay the final painter out at its intrinsic width — capped to the canvas so
     // long annotations wrap instead of running off a narrow drawing.
-    final width = math.min(measured.width, math.max(24.0, size.width - 2 * _padding));
+    final width = math.min(
+      measured.width,
+      math.min(maxWidth ?? double.infinity, math.max(24.0, size.width - 2 * _padding)),
+    );
     final painter = TextPainter(
       text: span,
       textDirection: TextDirection.ltr,
       textAlign: align == LabelAnchor.right
           ? TextAlign.right
           : align == LabelAnchor.center
-              ? TextAlign.center
-              : TextAlign.left,
+          ? TextAlign.center
+          : TextAlign.left,
     )..layout(minWidth: width, maxWidth: width);
 
     final dx = switch (align) {
@@ -57,27 +67,48 @@ class LabelPlacer {
       LabelAnchor.right => anchor.dx - painter.width,
       LabelAnchor.center => anchor.dx - painter.width / 2,
     };
-    var rect = _clamp(Rect.fromLTWH(dx, anchor.dy, painter.width, painter.height));
+    var rect = _clamp(
+      Rect.fromLTWH(dx, anchor.dy, painter.width, painter.height),
+      guarded: insideGuards,
+    );
     if (avoidOverlap) rect = _resolve(rect);
 
     painter.paint(canvas, rect.topLeft);
     _placed.add(rect);
+    return rect;
   }
 
-  Rect _clamp(Rect rect) {
+  /// Rectangle covering a line segment, inflated by [pad].
+  static Rect corridor(Offset a, Offset b, {double pad = 3}) {
+    return Rect.fromLTRB(
+      math.min(a.dx, b.dx),
+      math.min(a.dy, b.dy),
+      math.max(a.dx, b.dx),
+      math.max(a.dy, b.dy),
+    ).inflate(pad);
+  }
+
+  Rect _clamp(Rect rect, {bool guarded = true}) {
+    final minTop = guarded ? math.max(_padding, topGuard) : _padding;
     final maxLeft = math.max(_padding, size.width - rect.width - _padding);
-    final maxTop = math.max(_padding, size.height - rect.height - _padding);
+    final maxTop = math.max(
+      minTop,
+      size.height - rect.height - (guarded ? math.max(_padding, bottomGuard) : _padding),
+    );
     return Rect.fromLTWH(
       rect.left.clamp(_padding, maxLeft),
-      rect.top.clamp(_padding, maxTop),
+      rect.top.clamp(minTop, maxTop),
       rect.width,
       rect.height,
     );
   }
 
   /// Nudges the label vertically (down first, then up) until it clears the
-  /// annotations already on the canvas.
+  /// annotations already on the canvas. The shift is capped so a crowded
+  /// callout stays beside the feature it points at instead of drifting across
+  /// the sheet.
   Rect _resolve(Rect rect) {
+    final reach = math.max(rect.height * 3, 48.0);
     for (final direction in const [1.0, -1.0]) {
       var candidate = rect;
       for (var attempt = 0; attempt < 24; attempt++) {
@@ -86,7 +117,11 @@ class LabelPlacer {
         final shifted = direction > 0
             ? candidate.top + (hit.bottom - candidate.top) + _spacing
             : candidate.top - ((candidate.bottom - hit.top) + _spacing);
-        if (shifted < _padding || shifted + candidate.height > size.height - _padding) break;
+        if (shifted < math.max(_padding, topGuard) ||
+            shifted + candidate.height > size.height - math.max(_padding, bottomGuard)) {
+          break;
+        }
+        if ((shifted - rect.top).abs() > reach) break;
         candidate = Rect.fromLTWH(candidate.left, shifted, candidate.width, candidate.height);
       }
     }

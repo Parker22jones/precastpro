@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../painters/cad_palette.dart';
 import '../painters/elevation_painter.dart';
 import '../painters/plan_painter.dart';
 import '../state/design_state.dart';
+import 'mh_theme.dart';
 
-/// Right hand (or "Drawings" tab) column: elevation + plan canvases.
-class DrawingsPanel extends StatelessWidget {
+/// CAD sheet: elevation over plan, in either blueprint palette.
+class DrawingsPanel extends StatefulWidget {
   const DrawingsPanel({super.key, required this.design, this.stacked = false});
 
   final DesignState design;
@@ -14,82 +16,137 @@ class DrawingsPanel extends StatelessWidget {
   final bool stacked;
 
   @override
+  State<DrawingsPanel> createState() => _DrawingsPanelState();
+}
+
+class _DrawingsPanelState extends State<DrawingsPanel> {
+  bool _slate = false;
+
+  @override
   Widget build(BuildContext context) {
-    final elevation = _DrawingCard(
-      title: 'Elevation View',
+    final palette = _slate ? CadPalette.slate : CadPalette.light;
+    final elevation = _Sheet(
+      palette: palette,
+      sheetSize: kElevationSheet,
       child: CustomPaint(
         key: const Key('canvas-elevation'),
-        painter: buildElevationPainter(design),
+        painter: buildElevationPainter(widget.design, palette: palette),
         child: const SizedBox.expand(),
       ),
     );
-    final plan = _DrawingCard(
-      title: 'Plan View',
+    final plan = _Sheet(
+      palette: palette,
+      sheetSize: kPlanSheet,
       child: CustomPaint(
         key: const Key('canvas-plan'),
-        painter: buildPlanPainter(design),
+        painter: buildPlanPainter(widget.design, palette: palette),
         child: const SizedBox.expand(),
       ),
     );
 
-    if (stacked) {
-      return ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
-          SizedBox(height: 460, child: elevation),
-          const SizedBox(height: 12),
-          SizedBox(height: 400, child: plan),
-        ],
-      );
-    }
+    final toggle = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('SLATE', style: Mh.sectionTitle),
+        const SizedBox(width: 4),
+        SizedBox(
+          height: 18,
+          child: Switch(
+            key: const Key('toggle-slate'),
+            value: _slate,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onChanged: (v) => setState(() => _slate = v),
+          ),
+        ),
+      ],
+    );
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(children: [
-        Expanded(flex: 3, child: elevation),
-        const SizedBox(height: 12),
-        Expanded(flex: 2, child: plan),
-      ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: Mh.headerHeight,
+          color: Mh.chrome,
+          padding: const EdgeInsets.only(left: 8, right: 4),
+          child: Row(
+            children: [
+              const Expanded(child: Text('CAD DRAWING SHEET', style: Mh.sectionTitle)),
+              toggle,
+            ],
+          ),
+        ),
+        Expanded(
+          child: widget.stacked
+              ? ListView(
+                  padding: const EdgeInsets.all(4),
+                  children: [elevation, const SizedBox(height: 4), plan],
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Column(
+                    children: [
+                      Expanded(flex: 3, child: elevation),
+                      const SizedBox(height: 4),
+                      Expanded(flex: 2, child: plan),
+                    ],
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }
 
-ElevationPainter buildElevationPainter(DesignState design, {Color background = Colors.white}) =>
-    ElevationPainter(
-      layout: design.layout,
+ElevationPainter buildElevationPainter(
+  DesignState design, {
+  CadPalette palette = CadPalette.light,
+}) => ElevationPainter(
+  layout: design.layout,
+  pipes: design.pipes,
+  conflictedPipes: design.conflictedPipeNames,
+  palette: palette,
+  title: 'ELEVATION (VIEW A-A) - ${design.structureMark}',
+  castingLabel: design.casting.label,
+  castingClearOpeningIn: design.casting.clearOpeningIn,
+);
+
+PlanPainter buildPlanPainter(DesignState design, {CadPalette palette = CadPalette.light}) =>
+    PlanPainter(
+      size: design.size,
       pipes: design.pipes,
       conflictedPipes: design.conflictedPipeNames,
-      background: background,
+      topOpeningDiameterIn: design.casting.clearOpeningIn,
+      palette: palette,
+      title: 'PLAN VIEW - ${design.structureMark}',
     );
 
-PlanPainter buildPlanPainter(DesignState design, {Color background = Colors.white}) => PlanPainter(
-      insideDiameterIn: design.structureDiameterIn,
-      wallThicknessIn: design.layout.wallThicknessIn,
-      pipes: design.pipes,
-      conflictedPipes: design.conflictedPipeNames,
-      background: background,
-    );
+/// Logical drawing-sheet sizes. The painters are always laid out at these
+/// sizes and scaled to fit, so annotations keep the same spacing on a phone,
+/// on a monitor and in the exported PDF.
+const Size kElevationSheet = Size(640, 900);
+const Size kPlanSheet = Size(640, 640);
 
-class _DrawingCard extends StatelessWidget {
-  const _DrawingCard({required this.title, required this.child});
+class _Sheet extends StatelessWidget {
+  const _Sheet({required this.child, required this.palette, required this.sheetSize});
 
-  final String title;
   final Widget child;
+  final CadPalette palette;
+  final Size sheetSize;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(children: [
-        Container(
-          width: double.infinity,
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Text(title.toUpperCase(),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.6)),
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.paper,
+        border: Border.all(color: Mh.gridLine),
+      ),
+      child: AspectRatio(
+        aspectRatio: sheetSize.width / sheetSize.height,
+        child: FittedBox(
+          fit: BoxFit.fill,
+          child: SizedBox(width: sheetSize.width, height: sheetSize.height, child: child),
         ),
-        Expanded(child: Container(color: Colors.white, child: child)),
-      ]),
+      ),
     );
   }
 }

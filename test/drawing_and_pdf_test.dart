@@ -16,8 +16,10 @@ void main() {
     expect(layout.pieces, isNotEmpty);
     expect(layout.floorTopElevationFt - layout.floorBottomElevationFt, closeTo(8 / 12, 1e-9));
     for (var i = 1; i < layout.pieces.length; i++) {
-      expect(layout.pieces[i].bottomElevationFt,
-          closeTo(layout.pieces[i - 1].topElevationFt, 1e-9));
+      expect(
+        layout.pieces[i].bottomElevationFt,
+        closeTo(layout.pieces[i - 1].topElevationFt, 1e-9),
+      );
     }
     expect(layout.topOfStackElevationFt, closeTo(design.rimElevationFt, 0.01));
     expect(layout.jointElevationsFt.length, layout.pieces.length - 1);
@@ -36,38 +38,99 @@ void main() {
   });
 
   testWidgets('painters render to PNG and feed a multi-kilobyte PDF', (tester) async {
-    final design = DesignState(pipes: [
-      PipePenetration(name: 'IN', outsideDiameterIn: 15, invertElevationFt: 89.5, horizontalAngleDeg: 45),
-      PipePenetration(name: 'OUT', outsideDiameterIn: 18, invertElevationFt: 88.5, horizontalAngleDeg: 225),
-    ]);
+    final design = DesignState(
+      pipes: [
+        PipePenetration(
+          name: 'IN',
+          outsideDiameterIn: 15,
+          invertElevationFt: 89.5,
+          horizontalAngleDeg: 45,
+        ),
+        PipePenetration(
+          name: 'OUT',
+          outsideDiameterIn: 18,
+          invertElevationFt: 88.5,
+          horizontalAngleDeg: 225,
+        ),
+      ],
+    );
 
     // Rasterisation and PDF assembly need real async, not the fake test clock.
     await tester.runAsync(() async {
       final elevationPng = await renderPainterToPng(
-          buildElevationPainter(design), const Size(600, 800),
-          pixelRatio: 1);
-      final planPng =
-          await renderPainterToPng(buildPlanPainter(design), const Size(600, 600), pixelRatio: 1);
+        buildElevationPainter(design),
+        const Size(600, 800),
+        pixelRatio: 1,
+      );
+      final planPng = await renderPainterToPng(
+        buildPlanPainter(design),
+        const Size(600, 600),
+        pixelRatio: 1,
+      );
 
       expect(elevationPng.length, greaterThan(1000));
       expect(planPng.length, greaterThan(1000));
 
-      final pdf = await buildSubmittalPdf(SubmittalData(
-        jobName: design.jobName,
-        rimElevationFt: design.rimElevationFt,
-        invertElevationFt: design.invertElevationFt,
-        structureDiameterIn: design.structureDiameterIn,
-        conicalTop: design.conicalTop,
-        stack: design.stack,
-        pipes: design.pipes,
-        validation: design.validation,
-        elevationPng: elevationPng,
-        planPng: planPng,
-        generatedAt: DateTime(2026, 1, 2),
-      ));
+      final pdf = await buildSubmittalPdf(
+        SubmittalData(
+          jobName: design.jobName,
+          rimElevationFt: design.rimElevationFt,
+          invertElevationFt: design.invertElevationFt,
+          size: design.size,
+          conicalTop: design.conicalTop,
+          stack: design.stack,
+          pipes: design.pipes,
+          validation: design.validation,
+          elevationPng: elevationPng,
+          planPng: planPng,
+          generatedAt: DateTime(2026, 1, 2),
+        ),
+      );
 
       expect(pdf.length, greaterThan(5000));
       expect(String.fromCharCodes(pdf.sublist(0, 5)), '%PDF-');
+    });
+  });
+
+  test('stack pieces are lettered top down for the sheet callouts', () {
+    final design = DesignState(rimElevationFt: 104, invertElevationFt: 88);
+    final layout = design.layout;
+    final marks = layout.pieceMarks;
+
+    expect(marks.values.toSet().length, marks.length);
+    expect(marks[layout.pieces.last.piece.id], 'A');
+    expect(marks[layout.pieces.first.piece.id], String.fromCharCode(64 + marks.length));
+  });
+
+  testWidgets('sheets scale to any canvas without throwing', (tester) async {
+    final design = DesignState(
+      pipes: [
+        PipePenetration(
+          name: '#1',
+          outsideDiameterIn: 12,
+          invertElevationFt: 89,
+          horizontalAngleDeg: 0,
+        ),
+        PipePenetration(
+          name: '#2',
+          outsideDiameterIn: 12,
+          invertElevationFt: 89,
+          horizontalAngleDeg: 187,
+        ),
+      ],
+    );
+
+    await tester.runAsync(() async {
+      for (final size in const [Size(200, 200), Size(1400, 420), Size(360, 900)]) {
+        expect(
+          await renderPainterToPng(buildElevationPainter(design), size, pixelRatio: 1),
+          isNotEmpty,
+        );
+        expect(
+          await renderPainterToPng(buildPlanPainter(design), size, pixelRatio: 1),
+          isNotEmpty,
+        );
+      }
     });
   });
 
@@ -76,10 +139,15 @@ void main() {
 
     await tester.runAsync(() async {
       final elevation = await renderPainterToPng(
-          buildElevationPainter(design), const Size(300, 300),
-          pixelRatio: 1);
-      final plan =
-          await renderPainterToPng(buildPlanPainter(design), const Size(300, 300), pixelRatio: 1);
+        buildElevationPainter(design),
+        const Size(300, 300),
+        pixelRatio: 1,
+      );
+      final plan = await renderPainterToPng(
+        buildPlanPainter(design),
+        const Size(300, 300),
+        pixelRatio: 1,
+      );
       expect(elevation, isNotEmpty);
       expect(plan, isNotEmpty);
     });
