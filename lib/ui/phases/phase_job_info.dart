@@ -111,7 +111,7 @@ class PhaseJobInfo extends StatelessWidget {
           ),
           children: [
             const GridHeaderRow(
-              columns: [('Mark', 2), ('Job', 4), ('Customer', 3), ('Type', 3), ('', 2)],
+              columns: [('Mark', 2), ('Job', 4), ('Customer', 3), ('Type', 3), ('', 3)],
             ),
             for (var i = 0; i < app.structures.length; i++)
               GridRow(
@@ -126,10 +126,15 @@ class PhaseJobInfo extends StatelessWidget {
                     i == app.activeIndex
                         ? const StatusChip(label: 'Open', color: Mh.accent)
                         : TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              minimumSize: const Size(0, 22),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                             onPressed: () => app.selectStructure(i),
-                            child: const Text('OPEN'),
+                            child: const Text('OPEN', maxLines: 1, softWrap: false),
                           ),
-                    2,
+                    3,
                   ),
                 ],
               ),

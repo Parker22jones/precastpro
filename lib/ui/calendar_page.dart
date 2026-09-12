@@ -283,7 +283,7 @@ class _CastingLine extends StatelessWidget {
                   ('Job', 4),
                   ('Type', 3),
                   ('Status', 3),
-                  ('', 2),
+                  ('', 3),
                 ],
               ),
               for (var i = 0; i < scheduled.length; i++)
@@ -321,9 +321,14 @@ class _CastingLine extends StatelessWidget {
                           app.selectStructureRecord(scheduled[i]);
                           onOpenStructure();
                         },
-                        child: const Text('OPEN'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          minimumSize: const Size(0, 22),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('OPEN', maxLines: 1, softWrap: false),
                       ),
-                      2,
+                      3,
                     ),
                   ],
                 ),

@@ -186,6 +186,21 @@ class DenseDropdown<T> extends StatelessWidget {
       style: Mh.cell,
       borderRadius: BorderRadius.zero,
       icon: const Icon(Icons.arrow_drop_down, size: 18),
+      // Keep the closed field on one line; long catalog descriptions would
+      // otherwise wrap out of the dense cell.
+      selectedItemBuilder: (context) => [
+        for (final item in items)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              labelOf(item),
+              style: Mh.cell,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
       items: [
         for (final item in items)
           DropdownMenuItem<T>(
