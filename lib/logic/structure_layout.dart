@@ -46,6 +46,16 @@ class StructureLayout {
   double get wallThicknessIn => PieceCatalog.base(structureDiameterIn).wallThicknessIn;
   double get outsideDiameterIn => structureDiameterIn + 2 * wallThicknessIn;
 
+  /// Sheet marks keyed by catalog piece id, lettered top down the way the
+  /// shop submittals key the elevation to the bill of materials.
+  Map<String, String> get pieceMarks {
+    final marks = <String, String>{};
+    for (final laid in pieces.reversed) {
+      marks.putIfAbsent(laid.piece.id, () => String.fromCharCode(65 + marks.length));
+    }
+    return marks;
+  }
+
   /// Elevations of every horizontal joint in the stack.
   List<double> get jointElevationsFt => [
     for (var i = 0; i < pieces.length - 1; i++) pieces[i].topElevationFt,

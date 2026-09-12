@@ -105,7 +105,9 @@ ElevationPainter buildElevationPainter(
   pipes: design.pipes,
   conflictedPipes: design.conflictedPipeNames,
   palette: palette,
-  title: 'ELEVATION - ${design.structureMark}',
+  title: 'ELEVATION (VIEW A-A) - ${design.structureMark}',
+  castingLabel: design.casting.label,
+  castingClearOpeningIn: design.casting.clearOpeningIn,
 );
 
 PlanPainter buildPlanPainter(DesignState design, {CadPalette palette = CadPalette.light}) =>
@@ -114,8 +116,9 @@ PlanPainter buildPlanPainter(DesignState design, {CadPalette palette = CadPalett
       wallThicknessIn: design.layout.wallThicknessIn,
       pipes: design.pipes,
       conflictedPipes: design.conflictedPipeNames,
+      topOpeningDiameterIn: design.casting.clearOpeningIn,
       palette: palette,
-      title: 'PLAN - ${design.structureMark}',
+      title: 'PLAN VIEW - ${design.structureMark}',
     );
 
 /// Logical drawing-sheet sizes. The painters are always laid out at these

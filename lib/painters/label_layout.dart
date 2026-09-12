@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'cad_palette.dart';
+
 /// Horizontal anchoring of a drawing annotation relative to its anchor point.
 enum LabelAnchor { left, right, center }
 
@@ -36,14 +38,7 @@ class LabelPlacer {
     bool avoidOverlap = true,
     double? maxWidth,
   }) {
-    final span = TextSpan(
-      text: text,
-      style: TextStyle(
-        fontSize: fontSize,
-        color: color,
-        fontWeight: bold ? FontWeight.bold : FontWeight.w500,
-      ),
-    );
+    final span = TextSpan(text: text, style: cadLabelStyle(fontSize, color, bold: bold));
     final measured = TextPainter(text: span, textDirection: TextDirection.ltr)..layout();
     // Lay the final painter out at its intrinsic width — capped to the canvas so
     // long annotations wrap instead of running off a narrow drawing.
@@ -96,8 +91,11 @@ class LabelPlacer {
   }
 
   /// Nudges the label vertically (down first, then up) until it clears the
-  /// annotations already on the canvas.
+  /// annotations already on the canvas. The shift is capped so a crowded
+  /// callout stays beside the feature it points at instead of drifting across
+  /// the sheet.
   Rect _resolve(Rect rect) {
+    final reach = math.max(rect.height * 3, 48.0);
     for (final direction in const [1.0, -1.0]) {
       var candidate = rect;
       for (var attempt = 0; attempt < 24; attempt++) {
@@ -107,6 +105,7 @@ class LabelPlacer {
             ? candidate.top + (hit.bottom - candidate.top) + _spacing
             : candidate.top - ((candidate.bottom - hit.top) + _spacing);
         if (shifted < _padding || shifted + candidate.height > size.height - _padding) break;
+        if ((shifted - rect.top).abs() > reach) break;
         candidate = Rect.fromLTWH(candidate.left, shifted, candidate.width, candidate.height);
       }
     }

@@ -2,20 +2,21 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../models/job_spec.dart';
 import '../models/pipe_penetration.dart';
 import 'cad_palette.dart';
 import 'label_layout.dart';
 
-/// Top-down CAD plan: the barrel with every penetration placed at its exact
-/// clockwise angle off a 0 degree North heading, with a diameter dimension
-/// string and hole callouts.
+/// Top-down CAD plan drawn like the shop submittals: concentric barrel
+/// circles, a dashed compass crosshair with a fixed 0 degree North arrow,
+/// diameter dimension strings and a directional flow line per penetration
+/// labelled with its exact clock angle.
 class PlanPainter extends CustomPainter {
   PlanPainter({
     required this.insideDiameterIn,
     required this.wallThicknessIn,
     required this.pipes,
     required this.conflictedPipes,
+    this.topOpeningDiameterIn = 24,
     this.palette = CadPalette.light,
     this.title = 'PLAN VIEW',
   });
@@ -24,205 +25,264 @@ class PlanPainter extends CustomPainter {
   final double wallThicknessIn;
   final List<PipePenetration> pipes;
   final Set<String> conflictedPipes;
+
+  /// Access opening of the top set over the barrel, in inches.
+  final double topOpeningDiameterIn;
   final CadPalette palette;
   final String title;
+
+  /// Pipe stub length outside the wall, in inches.
+  static const double _stubIn = 14;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = palette.paper);
     final labels = LabelPlacer(size);
 
-    final center = Offset(size.width / 2, size.height / 2 + 8);
-    final outsideRadiusIn = insideDiameterIn / 2 + wallThicknessIn;
-    final available = math.min(size.width, size.height) / 2 - 86;
-    final scale = math.max(available, 20.0) / (outsideRadiusIn + 14);
+    _drawSheet(canvas, size, labels);
+
+    final center = Offset(size.width / 2, size.height / 2 + 10);
+    final insideR = math.max(insideDiameterIn / 2, 1.0);
+    final outsideR = insideR + wallThicknessIn;
+    final margin = math.min(72.0, math.min(size.width, size.height) * 0.14);
+    final available = math.max(math.min(size.width, size.height) / 2 - margin, 18.0);
+    final scale = available / (outsideR + _stubIn);
 
     double r(double inches) => inches * scale;
     Offset pt(double angleDeg, double radiusIn) => polar(center, r(radiusIn), angleDeg);
+    Offset atPx(double angleDeg, double radiusPx) => polar(center, radiusPx, angleDeg);
+    final outsidePx = r(outsideR);
 
-    // Border + title block.
-    final border = Rect.fromLTWH(3, 3, size.width - 6, size.height - 6);
-    canvas.drawRect(border, _stroke(palette.ink, 1.2));
-    canvas.drawLine(const Offset(3, 22), Offset(size.width - 3, 22), _stroke(palette.thinInk, 0.8));
-    labels.draw(canvas, title, const Offset(9, 6), 11.5, bold: true, color: palette.ink);
-    labels.draw(
-      canvas,
-      '${insideDiameterIn.toStringAsFixed(0)}" I.D. x '
-      '${wallThicknessIn.toStringAsFixed(0)}" WALL',
-      Offset(size.width - 9, 6),
-      9,
-      align: LabelAnchor.right,
-      color: palette.thinInk,
-    );
+    _drawBarrel(canvas, center, r, insideR, outsideR);
+    _drawCompass(canvas, labels, center, outsidePx);
+    _drawDiameterStrings(canvas, labels, center, r, insideR);
+    _drawNorthArrow(canvas, labels, atPx, outsidePx);
 
-    // Wall annulus.
-    canvas.drawCircle(center, r(outsideRadiusIn), Paint()..color = palette.concrete);
-    canvas.drawCircle(center, r(insideDiameterIn / 2), Paint()..color = palette.paper);
-    canvas.drawCircle(center, r(outsideRadiusIn), _stroke(palette.ink, 1.6));
-    canvas.drawCircle(center, r(insideDiameterIn / 2), _stroke(palette.ink, 1.6));
-
-    // Centre cross-hairs (CAD centre mark).
-    final crossPaint = _stroke(palette.thinInk, 0.8);
-    canvas.drawLine(
-      center - Offset(r(outsideRadiusIn) + 8, 0),
-      center + Offset(r(outsideRadiusIn) + 8, 0),
-      crossPaint,
-    );
-    canvas.drawLine(
-      center - Offset(0, r(outsideRadiusIn) + 8),
-      center + Offset(0, r(outsideRadiusIn) + 8),
-      crossPaint,
-    );
-
-    // Inside-diameter dimension string across the barrel.
-    drawDimensionLine(
-      canvas,
-      center - Offset(r(insideDiameterIn / 2), 0),
-      center + Offset(r(insideDiameterIn / 2), 0),
-      palette.dimension,
-    );
-    labels.draw(
-      canvas,
-      '\u00D8 ${insideDiameterIn.toStringAsFixed(0)}" I.D.',
-      Offset(center.dx, center.dy + 4),
-      9,
-      align: LabelAnchor.center,
-      color: palette.dimension,
-      avoidOverlap: false,
-    );
-
-    // Clock ticks every 30 degrees.
-    for (var a = 0; a < 360; a += 30) {
-      final p1 = pt(a.toDouble(), outsideRadiusIn);
-      final p2 = pt(a.toDouble(), outsideRadiusIn + 5);
-      canvas.drawLine(p1, p2, _stroke(palette.thinInk, 1));
-      final labelPt = pt(a.toDouble(), outsideRadiusIn + 12);
-      labels.draw(
-        canvas,
-        '$a\u00B0',
-        labelPt - const Offset(0, 5),
-        7.5,
-        align: LabelAnchor.center,
-        color: palette.thinInk,
-        avoidOverlap: false,
-      );
-    }
-
-    // North arrow at the 0 degree heading.
-    final nTip = pt(0, outsideRadiusIn + 28);
-    final nTail = pt(0, outsideRadiusIn + 8);
-    drawLeader(canvas, nTail, nTip, palette.ink);
-    labels.reserve(LabelPlacer.corridor(nTail, nTip, pad: 5));
-    labels.draw(
-      canvas,
-      'N  0\u00B0',
-      nTip - const Offset(0, 18),
-      10.5,
-      align: LabelAnchor.center,
-      bold: true,
-      color: palette.ink,
-    );
-
-    // Pipe penetrations.
+    // Pipe callouts claim their space before the decorative clock labels.
     for (final pipe in pipes) {
-      final conflicted = conflictedPipes.contains(pipe.name);
-      final color = conflicted ? palette.conflict : palette.pipe;
-      final angle = pipe.normalizedAngleDeg;
-      final halfAngleDeg = _halfAngleDeg(pipe.holeSizeIn / 2, outsideRadiusIn);
-
-      // Cored opening through the wall.
-      final opening = Path()
-        ..moveTo(
-          pt(angle - halfAngleDeg, insideDiameterIn / 2).dx,
-          pt(angle - halfAngleDeg, insideDiameterIn / 2).dy,
-        )
-        ..lineTo(
-          pt(angle - halfAngleDeg, outsideRadiusIn + 18).dx,
-          pt(angle - halfAngleDeg, outsideRadiusIn + 18).dy,
-        )
-        ..lineTo(
-          pt(angle + halfAngleDeg, outsideRadiusIn + 18).dx,
-          pt(angle + halfAngleDeg, outsideRadiusIn + 18).dy,
-        )
-        ..lineTo(
-          pt(angle + halfAngleDeg, insideDiameterIn / 2).dx,
-          pt(angle + halfAngleDeg, insideDiameterIn / 2).dy,
-        )
-        ..close();
-      canvas.drawPath(opening, Paint()..color = color.withValues(alpha: conflicted ? 0.30 : 0.14));
-      canvas.drawPath(opening, _stroke(color, 1.6));
-
-      // Radial centreline out from the structure centre.
-      canvas.drawLine(center, pt(angle, outsideRadiusIn + 18), _stroke(color, 1.0));
-      labels.reserve(
-        LabelPlacer.corridor(pt(angle, outsideRadiusIn), pt(angle, outsideRadiusIn + 18), pad: 2),
-      );
-
-      // Angular callout: arc from North to the pipe heading.
-      _angleArc(canvas, center, r(outsideRadiusIn) * 0.55, angle, palette.dimension);
-
-      // Callouts live in the sheet margin beside the barrel, tied back to the
-      // opening with a leader, so no annotation ever crosses the structure.
-      final holeCoords = pipe.holeCoordinates(outsideRadiusIn);
-      final outer = pt(angle, outsideRadiusIn + 18);
-      final onRight = angle < 180;
-      final barrelR = r(outsideRadiusIn);
-      final labelPt = Offset(
-        onRight ? center.dx + barrelR + 18 : center.dx - barrelR - 18,
-        outer.dy - 14,
-      );
-      final align = onRight ? LabelAnchor.left : LabelAnchor.right;
-      final rect = labels.draw(
-        canvas,
-        '${pipe.name}  ${pipe.material.label}\n'
-        '${angle.toStringAsFixed(0)}\u00B0 CW FROM N (${pipe.clockPosition})\n'
-        'HOLE \u00D8${pipe.holeSizeIn.toStringAsFixed(1)}"  '
-        'E${holeCoords.eastIn.toStringAsFixed(1)} N${holeCoords.northIn.toStringAsFixed(1)}',
-        labelPt,
-        8.5,
-        align: align,
-        color: color,
-        maxWidth: math.max(70, center.dx - barrelR - 24),
-      );
-      final leaderEnd = Offset(onRight ? rect.left - 4 : rect.right + 4, rect.center.dy);
-      canvas.drawLine(outer, leaderEnd, _stroke(color, 0.8));
+      _drawPipe(canvas, labels, size, center, r, pt, pipe, insideR, outsideR);
     }
+    _drawClockTicks(canvas, labels, atPx, outsidePx);
 
     if (conflictedPipes.isNotEmpty) {
       labels.draw(
         canvas,
         '!! PENETRATION CONFLICT',
         Offset(10, size.height - 20),
-        11,
+        10.5,
         bold: true,
         color: palette.conflict,
+        avoidOverlap: false,
       );
     }
   }
 
-  /// Small arc with an arrowhead showing the clockwise angle off North.
-  void _angleArc(Canvas canvas, Offset center, double radius, double angleDeg, Color color) {
-    if (angleDeg < 4) return;
-    final rect = Rect.fromCircle(center: center, radius: radius);
-    final sweep = angleDeg * math.pi / 180.0;
-    canvas.drawArc(rect, -math.pi / 2, sweep, false, _stroke(color, 0.9));
-    final end = polar(center, radius, angleDeg);
-    final tangent = Offset(
-      math.cos((angleDeg) * math.pi / 180.0),
-      math.sin(angleDeg * math.pi / 180.0),
+  void _drawSheet(Canvas canvas, Size size, LabelPlacer labels) {
+    final border = Rect.fromLTWH(3, 3, size.width - 6, size.height - 6);
+    canvas.drawRect(border, cadStroke(palette.ink, 1.0));
+    canvas.drawLine(
+      const Offset(3, 22),
+      Offset(size.width - 3, 22),
+      cadStroke(palette.ink, CadWeight.thin),
     );
-    drawLeader(canvas, end - tangent * 6, end, color);
+    labels.draw(canvas, title.toUpperCase(), const Offset(9, 6), 11, bold: true, color: palette.ink);
+    labels.draw(
+      canvas,
+      '${inchesText(insideDiameterIn)}" I.D. x ${inchesText(wallThicknessIn)}" WALL',
+      Offset(size.width - 9, 7),
+      8.5,
+      align: LabelAnchor.right,
+      color: palette.callout,
+    );
+    labels.draw(
+      canvas,
+      'ANGLES CLOCKWISE FROM FIXED 0\u00B0 NORTH',
+      Offset(9, size.height - 18),
+      8,
+      color: palette.callout,
+      avoidOverlap: false,
+    );
   }
 
-  double _halfAngleDeg(double pipeRadiusIn, double structureRadiusIn) {
-    final ratio = (pipeRadiusIn / structureRadiusIn).clamp(-0.999, 0.999);
-    return math.asin(ratio) * 180 / math.pi;
+  /// Dashed compass crosshair through the structure centre.
+  void _drawCompass(Canvas canvas, LabelPlacer labels, Offset center, double outsideR) {
+    final paint = cadStroke(palette.thinInk, CadWeight.thin);
+    final reach = outsideR + 30;
+    drawDashedLine(canvas, center - Offset(reach, 0), center + Offset(reach, 0), paint, dash: 7, gap: 4);
+    drawDashedLine(canvas, center - Offset(0, reach), center + Offset(0, reach), paint, dash: 7, gap: 4);
+    labels.reserve(Rect.fromCircle(center: center, radius: 6));
   }
 
-  Paint _stroke(Color color, double width) => Paint()
-    ..color = color
-    ..strokeWidth = width
-    ..style = PaintingStyle.stroke;
+  void _drawBarrel(Canvas canvas, Offset center, double Function(double) r, double insideR, double outsideR) {
+    canvas.drawCircle(center, r(outsideR), Paint()..color = palette.concrete);
+    canvas.drawCircle(center, r(outsideR), cadStroke(palette.ink, CadWeight.outline));
+    canvas.drawCircle(center, r(insideR), cadStroke(palette.ink, CadWeight.outline));
+    // Access opening of the top, shown lighter as it sits above the barrel.
+    final openingR = math.min(topOpeningDiameterIn / 2, insideR);
+    canvas.drawCircle(center, r(openingR), cadStroke(palette.thinInk, CadWeight.hidden));
+  }
+
+  /// Diagonal diameter dimension strings, as drawn on the submittals.
+  void _drawDiameterStrings(
+    Canvas canvas,
+    LabelPlacer labels,
+    Offset center,
+    double Function(double) r,
+    double insideR,
+  ) {
+    void diameter(double angleDeg, double radiusIn, String text) {
+      final a = polar(center, r(radiusIn), angleDeg);
+      final b = polar(center, r(radiusIn), angleDeg + 180);
+      drawDimensionLine(canvas, a, b, palette.dimension, head: 5);
+      labels.reserve(LabelPlacer.corridor(a, b, pad: 3));
+      // Parked along the string, not on the centre, so the callouts stay clear.
+      final at = polar(center, r(radiusIn) * 0.55, angleDeg);
+      labels.draw(
+        canvas,
+        text,
+        at + const Offset(0, -16),
+        9.5,
+        align: LabelAnchor.center,
+        color: palette.dimension,
+      );
+    }
+
+    diameter(48, insideR, '${inchesText(insideDiameterIn)}\u00F8');
+    final openingR = math.min(topOpeningDiameterIn / 2, insideR);
+    if (openingR < insideR - 1) {
+      diameter(132, openingR, '${inchesText(openingR * 2)}\u00F8');
+    }
+  }
+
+  void _drawClockTicks(
+    Canvas canvas,
+    LabelPlacer labels,
+    Offset Function(double, double) atPx,
+    double outsidePx,
+  ) {
+    for (var a = 0; a < 360; a += 30) {
+      canvas.drawLine(
+        atPx(a.toDouble(), outsidePx),
+        atPx(a.toDouble(), outsidePx + 6),
+        cadStroke(palette.thinInk, CadWeight.thin),
+      );
+      final crowded = pipes.any((p) {
+        final delta = (p.normalizedAngleDeg - a).abs() % 360;
+        return math.min(delta, 360 - delta) < 20;
+      });
+      if (a % 90 == 0 && a != 0 && !crowded) {
+        labels.draw(
+          canvas,
+          '$a\u00B0',
+          atPx(a.toDouble(), outsidePx + 17) - const Offset(0, 5),
+          7.5,
+          align: LabelAnchor.center,
+          color: palette.thinInk,
+          avoidOverlap: false,
+        );
+      }
+    }
+  }
+
+  /// Prominent fixed North indicator at the absolute top of the circle.
+  void _drawNorthArrow(
+    Canvas canvas,
+    LabelPlacer labels,
+    Offset Function(double, double) atPx,
+    double outsidePx,
+  ) {
+    final tail = atPx(0, outsidePx + 8);
+    final tip = atPx(0, outsidePx + 44);
+    canvas.drawLine(tail, tip, cadStroke(palette.ink, CadWeight.pipe));
+    drawArrowHead(canvas, tip, const Offset(0, 1), palette.ink, 9);
+    labels.reserve(LabelPlacer.corridor(tail, tip, pad: 6));
+    labels.draw(
+      canvas,
+      'N 0\u00B0',
+      tip - const Offset(0, 22),
+      11,
+      align: LabelAnchor.center,
+      bold: true,
+      color: palette.ink,
+    );
+  }
+
+  void _drawPipe(
+    Canvas canvas,
+    LabelPlacer labels,
+    Size size,
+    Offset center,
+    double Function(double) r,
+    Offset Function(double, double) pt,
+    PipePenetration pipe,
+    double insideR,
+    double outsideR,
+  ) {
+    final conflicted = conflictedPipes.contains(pipe.name);
+    final color = conflicted ? palette.conflict : palette.pipe;
+    final holeColor = conflicted ? palette.conflict : palette.hole;
+    final angle = pipe.normalizedAngleDeg;
+    final rad = (angle - 90) * math.pi / 180.0;
+    final along = Offset(math.cos(rad), math.sin(rad));
+    final across = Offset(-along.dy, along.dx);
+
+    // Directional flow line from the centre out through the wall.
+    final tip = pt(angle, outsideR + _stubIn);
+    canvas.drawLine(center, tip, cadStroke(color, CadWeight.pipe));
+    drawArrowHead(canvas, tip, -along, color, 7);
+
+    // Pipe walls and the cored opening through the barrel wall.
+    final halfPipe = r(pipe.outsideDiameterIn / 2);
+    final halfHole = r(pipe.holeSizeIn / 2);
+    final wallIn = pt(angle, insideR);
+    for (final sign in const [-1.0, 1.0]) {
+      canvas.drawLine(
+        wallIn + across * (halfPipe * sign),
+        tip + across * (halfPipe * sign),
+        cadStroke(color, CadWeight.hidden),
+      );
+    }
+    final holeOuter = pt(angle, outsideR);
+    canvas.drawLine(
+      wallIn + across * halfHole,
+      holeOuter + across * halfHole,
+      cadStroke(holeColor, CadWeight.pipe),
+    );
+    canvas.drawLine(
+      wallIn - across * halfHole,
+      holeOuter - across * halfHole,
+      cadStroke(holeColor, CadWeight.pipe),
+    );
+
+    labels.reserve(LabelPlacer.corridor(center, tip, pad: halfPipe + 2));
+
+    // Angle callout parked outside the barrel on the pipe's own heading.
+    final vertical = angle < 12 || angle > 348 || (angle > 168 && angle < 192);
+    final onRight = angle < 180;
+    // Keep the 0 degree callout clear of the fixed North arrow.
+    final anchor = vertical && (angle < 12 || angle > 348)
+        ? tip + const Offset(46, 10)
+        : tip + along * 14;
+    final rect = labels.draw(
+      canvas,
+      '${pipe.name}\n${angle.toStringAsFixed(0)}\u00B0 (${pipe.clockPosition})\n'
+      'HOLE ${inchesText(pipe.holeSizeIn)}\u00F8',
+      Offset(anchor.dx, anchor.dy - (angle > 90 && angle < 270 ? 2 : 30)),
+      8.5,
+      align: vertical && angle > 90
+          ? LabelAnchor.center
+          : (onRight ? LabelAnchor.left : LabelAnchor.right),
+      color: color,
+      maxWidth: math.max(58.0, size.width * 0.18),
+    );
+    if (!rect.contains(tip)) {
+      canvas.drawLine(
+        tip,
+        Offset(tip.dx < rect.center.dx ? rect.left - 3 : rect.right + 3, rect.center.dy),
+        cadStroke(color, CadWeight.dimension),
+      );
+    }
+  }
 
   @override
   bool shouldRepaint(covariant PlanPainter oldDelegate) => true;

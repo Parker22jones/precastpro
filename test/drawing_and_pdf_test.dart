@@ -92,6 +92,48 @@ void main() {
     });
   });
 
+  test('stack pieces are lettered top down for the sheet callouts', () {
+    final design = DesignState(rimElevationFt: 104, invertElevationFt: 88);
+    final layout = design.layout;
+    final marks = layout.pieceMarks;
+
+    expect(marks.values.toSet().length, marks.length);
+    expect(marks[layout.pieces.last.piece.id], 'A');
+    expect(marks[layout.pieces.first.piece.id], String.fromCharCode(64 + marks.length));
+  });
+
+  testWidgets('sheets scale to any canvas without throwing', (tester) async {
+    final design = DesignState(
+      pipes: [
+        PipePenetration(
+          name: '#1',
+          outsideDiameterIn: 12,
+          invertElevationFt: 89,
+          horizontalAngleDeg: 0,
+        ),
+        PipePenetration(
+          name: '#2',
+          outsideDiameterIn: 12,
+          invertElevationFt: 89,
+          horizontalAngleDeg: 187,
+        ),
+      ],
+    );
+
+    await tester.runAsync(() async {
+      for (final size in const [Size(200, 200), Size(1400, 420), Size(360, 900)]) {
+        expect(
+          await renderPainterToPng(buildElevationPainter(design), size, pixelRatio: 1),
+          isNotEmpty,
+        );
+        expect(
+          await renderPainterToPng(buildPlanPainter(design), size, pixelRatio: 1),
+          isNotEmpty,
+        );
+      }
+    });
+  });
+
   testWidgets('painters survive degenerate input without throwing', (tester) async {
     final design = DesignState(rimElevationFt: 90, invertElevationFt: 90, pipes: []);
 
