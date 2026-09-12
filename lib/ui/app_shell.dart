@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../state/app_state.dart';
 import 'app_scope.dart';
+import 'calendar_page.dart';
 import 'drawings_panel.dart';
 import 'inventory_page.dart';
+import 'jobs_page.dart';
 import 'logistics_page.dart';
 import 'mh_theme.dart';
 import 'phases/phase_elevations.dart';
@@ -19,11 +21,13 @@ const double kWideLayoutBreakpoint = 900;
 /// Sidebar destinations: the five engineering phases plus the operations
 /// modules that share the same store.
 enum Module {
+  jobs('', 'Jobs', Icons.account_tree_outlined),
   phase1('1', 'Job Info & Spec', Icons.description_outlined),
   phase2('2', 'Elevations & Sizing', Icons.straighten),
   phase3('3', 'Pipe Schedule', Icons.grid_on),
   phase4('4', 'Structural Details', Icons.settings_input_component),
   phase5('5', 'Takeoff & Production', Icons.fact_check_outlined),
+  calendar('', 'Production Calendar', Icons.calendar_month_outlined),
   logistics('', 'Logistics Dashboard', Icons.local_shipping_outlined),
   inventory('', 'Inventory Management', Icons.inventory_2_outlined);
 
@@ -145,6 +149,10 @@ class _AppShellState extends State<AppShell> {
 
   Widget _content(AppState app, bool wide) {
     final page = switch (_module) {
+      Module.jobs => JobsPage(onOpenStructure: () => setState(() => _module = Module.phase1)),
+      Module.calendar => CalendarPage(
+        onOpenStructure: () => setState(() => _module = Module.phase1),
+      ),
       Module.phase1 => const PhaseJobInfo(),
       Module.phase2 => const PhaseElevations(),
       Module.phase3 => const PhasePipeSchedule(),
@@ -271,7 +279,7 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final phases = Module.values.where((m) => m.isPhase).toList();
-    final ops = Module.values.where((m) => !m.isPhase).toList();
+    final ops = Module.values.where((m) => !m.isPhase && m != Module.jobs).toList();
     final lowCount = app.lowStockItems.length;
 
     return Container(
@@ -300,6 +308,12 @@ class _Sidebar extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          const _SidebarHeading('Projects'),
+          _SidebarTile(
+            module: Module.jobs,
+            selected: module == Module.jobs,
+            onTap: () => onSelect(Module.jobs),
           ),
           const _SidebarHeading('Engineering Wizard'),
           for (final m in phases)

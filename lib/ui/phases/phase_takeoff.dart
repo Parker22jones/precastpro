@@ -26,14 +26,19 @@ class _PhaseTakeoffState extends State<PhaseTakeoff> {
   Future<void> _exportSubmittal() async {
     setState(() => _exporting = true);
     final messenger = ScaffoldMessenger.of(context);
-    final design = AppScope.of(context).design;
+    final app = AppScope.of(context);
+    final design = app.design;
+    final job = app.activeJob;
     try {
       final elevationPng = await renderPainterToPng(buildElevationPainter(design), kElevationSheet);
       final planPng = await renderPainterToPng(buildPlanPainter(design), kPlanSheet);
       final bytes = await buildSubmittalPdf(
         SubmittalData(
           jobName: design.jobName,
+          jobNumber: job.number,
+          contractor: job.contractor,
           structureMark: design.structureMark,
+          downstreamMark: design.downstreamMark,
           customer: design.customer,
           structureTypeLabel: design.structureType.label,
           castDate: design.castDate,
@@ -41,6 +46,9 @@ class _PhaseTakeoffState extends State<PhaseTakeoff> {
           rimElevationFt: design.rimElevationFt,
           invertElevationFt: design.invertElevationFt,
           structureDiameterIn: design.structureDiameterIn,
+          wallThicknessIn: design.layout.wallThicknessIn,
+          castingLabel: design.casting.label,
+          castingWeightLbs: design.casting.weightLbs,
           conicalTop: design.conicalTop,
           stack: design.stack,
           pipes: design.pipes,

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'job_spec.dart';
+import 'pipe_product.dart';
 
 /// A single pipe entering or leaving the structure.
 class PipePenetration {
@@ -11,10 +12,23 @@ class PipePenetration {
     required this.horizontalAngleDeg,
     this.material = PipeMaterial.pvc,
     this.boot = BootType.aLok,
+    this.productId,
+    this.psx = PsxConnector.none,
+    this.nominalSizeIn,
     double? holeSizeIn,
-  }) : holeSizeIn = holeSizeIn ?? outsideDiameterIn + 4;
+  }) : holeSizeIn = holeSizeIn ?? outsideDiameterIn + psx.holeAllowanceIn;
 
   String name;
+
+  /// Catalog product backing this penetration, when picked from the
+  /// quick-selector.
+  String? productId;
+
+  /// Nominal size the product was selected at, in inches.
+  double? nominalSizeIn;
+
+  /// Press-Seal connector lookup; a sleeve replaces the mortar assumption.
+  PsxConnector psx;
 
   /// Pipe material called out on the schedule.
   PipeMaterial material;
@@ -54,6 +68,30 @@ class PipePenetration {
     return '$hour:${minute.toString().padLeft(2, '0')}';
   }
 
+  PipeProduct? get product => productById(productId);
+
+  /// Applies a catalog product at [nominalIn], recomputing OD and hole size.
+  void applyProduct(PipeProduct selected, double nominalIn) {
+    productId = selected.id;
+    nominalSizeIn = nominalIn;
+    material = selected.material;
+    outsideDiameterIn = selected.outsideDiameterFor(nominalIn);
+    holeSizeIn = outsideDiameterIn + psx.holeAllowanceIn;
+  }
+
+  /// Switches the connector lookup and re-derives the cast hole size.
+  void applyPsx(PsxConnector connector) {
+    psx = connector;
+    if (connector.isSleeve) boot = BootType.pressSeal;
+    holeSizeIn = outsideDiameterIn + connector.holeAllowanceIn;
+  }
+
+  /// Annular space treatment written on the schedule: mortar by default, or
+  /// the rubber sleeve specification once a PSX connector is selected.
+  String get sealSpec => psx.isSleeve
+      ? '${psx.label} sleeve ${psx.sleeveThicknessIn.toStringAsFixed(2)}" wall - no mortar'
+      : 'Mortar annular space ${((holeSizeIn - outsideDiameterIn) / 2).toStringAsFixed(2)}"';
+
   /// Hole centre coordinates on the structure wall, in inches east/north of
   /// the structure centre, for the given wall radius.
   ({double eastIn, double northIn}) holeCoordinates(double radiusIn) => (
@@ -68,6 +106,9 @@ class PipePenetration {
     horizontalAngleDeg: horizontalAngleDeg,
     material: material,
     boot: boot,
+    productId: productId,
+    psx: psx,
+    nominalSizeIn: nominalSizeIn,
     holeSizeIn: holeSizeIn,
   );
 }

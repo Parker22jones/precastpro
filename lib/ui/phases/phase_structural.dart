@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../models/casting_catalog.dart';
 import '../../models/job_spec.dart';
+import '../../models/pipe_product.dart';
 import '../../models/precast_piece.dart';
 import '../app_scope.dart';
 import '../mh_theme.dart';
@@ -57,6 +59,24 @@ class PhaseStructural extends StatelessWidget {
               ),
             ),
             SpecRow(
+              label: 'EJ Casting',
+              child: DenseDropdown<String>(
+                key: const Key('field-casting'),
+                value: design.castingId,
+                items: kEjCastings.map((c) => c.id).toList(),
+                labelOf: (id) => castingById(id).label,
+                onChanged: (id) => design.castingId = id,
+              ),
+            ),
+            SpecRow(
+              label: 'Casting Weight / Opening',
+              child: Text(
+                '${design.casting.weightLbs.toStringAsFixed(0)} lb  -  '
+                '${design.casting.clearOpeningIn.toStringAsFixed(0)}" clear opening',
+                style: Mh.cellNum,
+              ),
+            ),
+            SpecRow(
               label: 'Steps',
               child: DenseField(
                 key: const Key('field-steps'),
@@ -75,7 +95,7 @@ class PhaseStructural extends StatelessWidget {
           trailing: _DefaultBootPicker(),
           children: [
             DenseGrid(
-              minWidth: 560,
+              minWidth: 760,
               rows: [
                 const GridHeaderRow(
                   columns: [
@@ -83,6 +103,7 @@ class PhaseStructural extends StatelessWidget {
                     ('O.D.', 2),
                     ('Hole', 2),
                     ('Boot Type', 5),
+                    ('Press-Seal Lookup', 5),
                     ('Stock SKU', 3),
                   ],
                 ),
@@ -114,7 +135,23 @@ class PhaseStructural extends StatelessWidget {
                         ),
                         5,
                       ),
-                      (Text(design.pipes[i].boot.sku, style: Mh.cell), 3),
+                      (
+                        DenseDropdown<PsxConnector>(
+                          key: Key('structural-psx-$i'),
+                          value: design.pipes[i].psx,
+                          items: PsxConnector.values,
+                          labelOf: (c) => c.label,
+                          onChanged: (c) => design.updatePipe(i, (p) => p.applyPsx(c)),
+                        ),
+                        5,
+                      ),
+                      (
+                        Text(
+                          design.pipes[i].psx.sku ?? design.pipes[i].boot.sku,
+                          style: Mh.cell,
+                        ),
+                        3,
+                      ),
                     ],
                   ),
               ],

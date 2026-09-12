@@ -14,6 +14,12 @@ class PhaseJobInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final design = app.design;
+    final job = app.activeJob;
+    final siblings = app
+        .alphabeticalStructures(design.jobId)
+        .map((s) => s.mark)
+        .where((m) => m != design.structureMark)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(Mh.gap),
@@ -30,7 +36,23 @@ class PhaseJobInfo extends StatelessWidget {
               ),
             ),
             SpecRow(
-              label: 'Structure Mark',
+              label: 'Job Number',
+              child: DenseField(
+                key: const Key('field-job-number'),
+                value: job.number,
+                onChanged: (v) => app.updateJob(job, number: v),
+              ),
+            ),
+            SpecRow(
+              label: 'Contractor',
+              child: DenseField(
+                key: const Key('field-contractor'),
+                value: job.contractor,
+                onChanged: (v) => app.updateJob(job, contractor: v),
+              ),
+            ),
+            SpecRow(
+              label: 'Structure Name',
               child: DenseField(
                 key: const Key('field-structure-mark'),
                 value: design.structureMark,
@@ -57,6 +79,27 @@ class PhaseJobInfo extends StatelessWidget {
             SpecRow(
               label: 'Cast Date',
               child: _CastDateCell(app: app),
+            ),
+            SpecRow(
+              label: 'Flows Into',
+              child: DenseDropdown<String>(
+                value: design.downstreamMark ?? '',
+                items: ['', ...siblings],
+                labelOf: (m) => m.isEmpty ? 'None (outfall)' : m,
+                onChanged: (m) => design.downstreamMark = m,
+              ),
+            ),
+            SpecRow(
+              label: 'Shop Priority',
+              child: DenseField(
+                key: const Key('field-priority'),
+                value: '${design.priority}',
+                numeric: true,
+                onChanged: (v) {
+                  final rank = int.tryParse(v.trim());
+                  if (rank != null) design.priority = rank;
+                },
+              ),
             ),
           ],
         ),

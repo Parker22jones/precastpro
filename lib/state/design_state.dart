@@ -3,18 +3,24 @@ import 'package:flutter/foundation.dart';
 import '../logic/pipe_validator.dart';
 import '../logic/stack_calculator.dart';
 import '../logic/structure_layout.dart';
+import '../models/casting_catalog.dart';
 import '../models/component_status.dart';
 import '../models/job_spec.dart';
 import '../models/pipe_penetration.dart';
+import '../models/pipe_product.dart';
 import '../models/precast_piece.dart';
 
 /// Everything the engineering wizard collects for a single structure, plus the
 /// derived stack, layout and spatial validation.
 class DesignState extends ChangeNotifier {
   DesignState({
+    this.jobId = 'job-1',
     String jobName = 'Sample Job - MH-1',
     String structureMark = 'MH-1',
     String customer = 'City of Springfield',
+    String? downstreamMark,
+    String castingId = 'EJ BJWSA',
+    int priority = 0,
     StructureType structureType = StructureType.sanitaryManhole,
     DateTime? castDate,
     double rimElevationFt = 100.0,
@@ -29,6 +35,9 @@ class DesignState extends ChangeNotifier {
   }) : _jobName = jobName,
        _structureMark = structureMark,
        _customer = customer,
+       _downstreamMark = downstreamMark,
+       _castingId = castingId,
+       _priority = priority,
        _structureType = structureType,
        _castDate = castDate ?? DateTime(2026, 1, 15),
        _rimElevationFt = rimElevationFt,
@@ -58,9 +67,15 @@ class DesignState extends ChangeNotifier {
              ),
            ];
 
+  /// Job this structure belongs to in the global Jobs view.
+  String jobId;
+
   String _jobName;
   String _structureMark;
   String _customer;
+  String? _downstreamMark;
+  String _castingId;
+  int _priority;
   StructureType _structureType;
   DateTime _castDate;
   double _rimElevationFt;
@@ -87,6 +102,29 @@ class DesignState extends ChangeNotifier {
   double get maxGradeRingStackIn => _maxGradeRingStackIn;
   int get stepCount => _stepCount;
   List<PipePenetration> get pipes => List.unmodifiable(_pipes);
+
+  /// Mark of the structure this one discharges into; null for an outfall.
+  String? get downstreamMark => _downstreamMark;
+  String get castingId => _castingId;
+  EjCasting get casting => castingById(_castingId);
+
+  /// Shop priority rank; lower sorts first, 0 means unranked.
+  int get priority => _priority;
+
+  set downstreamMark(String? value) {
+    _downstreamMark = (value == null || value.trim().isEmpty) ? null : value.trim();
+    notifyListeners();
+  }
+
+  set castingId(String value) {
+    _castingId = value;
+    notifyListeners();
+  }
+
+  set priority(int value) {
+    _priority = value < 0 ? 0 : value;
+    notifyListeners();
+  }
 
   set jobName(String value) {
     _jobName = value;
@@ -214,6 +252,15 @@ class DesignState extends ChangeNotifier {
 
   double get totalWeightLbs => stack.totalWeightLbs;
 
+  /// True once any penetration uses a Press-Seal sleeve, which removes the
+  /// mortar assumption from the schedule.
+  bool get usesSleeves => _pipes.any((p) => p.psx.isSleeve);
+
+  /// Total structural payload the yard loads out: concrete plus castings,
+  /// boots and steps.
+  double get payloadWeightLbs =>
+      buildComponents().fold(0.0, (sum, c) => sum + c.weightLbs);
+
   /// Every physical item the yard has to produce or pull for this structure,
   /// in build order: concrete pieces, then castings and accessories.
   List<StructureComponent> buildComponents() {
@@ -234,23 +281,27 @@ class DesignState extends ChangeNotifier {
         );
       }
     }
+    final top = casting;
     out.add(
       StructureComponent(
         id: nextId(),
-        pieceId: 'LID-24',
-        description: '24" Iron Frame & Lid',
-        weightLbs: 320,
-        stockSku: 'LID-24',
+        pieceId: top.sku,
+        description: top.label,
+        weightLbs: top.weightLbs,
+        stockSku: top.sku,
       ),
     );
     for (final pipe in _pipes) {
+      final sleeveSku = pipe.psx.sku;
       out.add(
         StructureComponent(
           id: nextId(),
-          pieceId: pipe.boot.sku,
-          description: '${pipe.boot.label} boot - ${pipe.name}',
+          pieceId: sleeveSku ?? pipe.boot.sku,
+          description: sleeveSku == null
+              ? '${pipe.boot.label} boot - ${pipe.name}'
+              : '${pipe.psx.label} sleeve - ${pipe.name}',
           weightLbs: 12,
-          stockSku: pipe.boot.sku,
+          stockSku: sleeveSku ?? pipe.boot.sku,
         ),
       );
     }

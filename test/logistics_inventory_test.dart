@@ -20,7 +20,7 @@ void main() {
       final skus = record.components.map((c) => c.stockSku).toSet();
 
       expect(record.components, isNotEmpty);
-      expect(skus, contains('LID-24'));
+      expect(skus, contains('EJ-BJWSA'));
       expect(skus, contains('STEP-MA'));
       expect(skus, contains(BootType.aLok.sku));
       expect(record.components.where((c) => c.stockSku == 'STEP-MA').length, 2);
@@ -71,8 +71,8 @@ void main() {
     test('shipping decrements the matching stock item exactly once', () {
       final app = singleStructure();
       final record = app.activeStructure;
-      final component = record.components.firstWhere((c) => c.stockSku == 'LID-24');
-      final item = app.itemForSku('LID-24')!;
+      final component = record.components.firstWhere((c) => c.stockSku == 'EJ-BJWSA');
+      final item = app.itemForSku('EJ-BJWSA')!;
       final before = item.onHand;
 
       app.setComponentStatus(record, component, ComponentStatus.shipped);
@@ -86,8 +86,8 @@ void main() {
     test('rolling a shipped piece back into the yard returns the stock', () {
       final app = singleStructure();
       final record = app.activeStructure;
-      final component = record.components.firstWhere((c) => c.stockSku == 'LID-24');
-      final item = app.itemForSku('LID-24')!;
+      final component = record.components.firstWhere((c) => c.stockSku == 'EJ-BJWSA');
+      final item = app.itemForSku('EJ-BJWSA')!;
       final before = item.onHand;
 
       app.setComponentStatus(record, component, ComponentStatus.shipped);
@@ -110,8 +110,8 @@ void main() {
 
     test('crossing the minimum threshold raises one amber alert', () {
       final item = InventoryItem(
-        sku: 'LID-24',
-        description: '24" iron lid',
+        sku: 'EJ-BJWSA',
+        description: 'EJ BJWSA manhole cover',
         category: StockCategory.casting,
         onHand: 2,
         minThreshold: 1,
@@ -122,14 +122,14 @@ void main() {
         inventory: [item],
       );
       final record = app.activeStructure;
-      final lids = record.components.where((c) => c.stockSku == 'LID-24').toList();
+      final lids = record.components.where((c) => c.stockSku == 'EJ-BJWSA').toList();
 
       app.setComponentStatus(record, lids.first, ComponentStatus.shipped);
       expect(item.onHand, 1);
       expect(item.isLowStock, isTrue);
       expect(app.lowStockItems, contains(item));
       expect(app.unreadNotifications.length, 1);
-      expect(app.unreadNotifications.single.sku, 'LID-24');
+      expect(app.unreadNotifications.single.sku, 'EJ-BJWSA');
 
       // No duplicate reminder while the first one is unread.
       app.setThreshold(item, 1);
@@ -144,7 +144,7 @@ void main() {
 
     test('manually issuing stock below the minimum also raises a reminder', () {
       final app = singleStructure();
-      final item = app.itemForSku('LID-24')!;
+      final item = app.itemForSku('EJ-BJWSA')!;
       app.setThreshold(item, 5);
       app.receiveStock(item, -item.onHand + 6);
       app.markNotificationsRead();
@@ -153,7 +153,7 @@ void main() {
       app.receiveStock(item, -1);
 
       expect(item.isLowStock, isTrue);
-      expect(app.unreadNotifications.single.sku, 'LID-24');
+      expect(app.unreadNotifications.single.sku, 'EJ-BJWSA');
     });
 
     test('unknown skus never throw', () {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/job_spec.dart';
+import '../../models/pipe_product.dart';
 import '../app_scope.dart';
 import '../mh_theme.dart';
 import '../widgets/dense.dart';
@@ -18,12 +19,15 @@ class PhasePipeSchedule extends StatelessWidget {
 
     const columns = <(String, int)>[
       ('Pipe', 3),
-      ('Type', 3),
-      ('O.D. in', 3),
-      ('Hole in', 3),
+      ('Type', 2),
+      ('Product', 5),
+      ('Nom in', 2),
+      ('O.D. in', 2),
+      ('Hole in', 2),
       ('Invert ft', 3),
       ('A-Clock deg', 3),
       ('Clock', 2),
+      ('Connector', 5),
       ('Hole X/Y in', 4),
       ('', 2),
     ];
@@ -47,15 +51,48 @@ class PhasePipeSchedule extends StatelessWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final narrow = constraints.maxWidth < 640;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (!narrow) const GridHeaderRow(columns: columns),
-                        for (var i = 0; i < design.pipes.length; i++)
-                          _PipeRow(index: i, narrow: narrow, radiusIn: radiusIn, columns: columns),
-                      ],
-                    );
+                    final rows = <Widget>[
+                      if (!narrow) const GridHeaderRow(columns: columns),
+                      for (var i = 0; i < design.pipes.length; i++)
+                        _PipeRow(index: i, narrow: narrow, radiusIn: radiusIn, columns: columns),
+                    ];
+                    if (narrow) {
+                      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+                    }
+                    return DenseGrid(minWidth: 1180, rows: rows);
                   },
+                ),
+                SpecPanel(
+                  title: 'Annular Space Schedule',
+                  children: [
+                    const GridHeaderRow(
+                      columns: [('Pipe', 3), ('Connector', 4), ('Seal Specification', 8)],
+                    ),
+                    for (var i = 0; i < design.pipes.length; i++)
+                      GridRow(
+                        striped: i.isOdd,
+                        cells: [
+                          (Text(design.pipes[i].name, style: Mh.cell), 3),
+                          (
+                            Text(
+                              design.pipes[i].psx.isSleeve
+                                  ? design.pipes[i].psx.label
+                                  : design.pipes[i].boot.label,
+                              style: Mh.cell,
+                            ),
+                            4,
+                          ),
+                          (
+                            Text(
+                              design.pipes[i].sealSpec,
+                              key: Key('seal-spec-$i'),
+                              style: Mh.cell,
+                            ),
+                            8,
+                          ),
+                        ],
+                      ),
+                  ],
                 ),
                 if (validation.conflicts.isNotEmpty)
                   Container(
@@ -141,6 +178,39 @@ class _PipeRow extends StatelessWidget {
         labelOf: (m) => m.label,
         onChanged: (m) => design.updatePipe(index, (p) => p.material = m),
       ),
+      DenseDropdown<String>(
+        key: Key('pipe-$index-product'),
+        value: pipe.productId ?? '',
+        items: ['', ...kPipeProducts.map((p) => p.id)],
+        labelOf: (id) => id.isEmpty ? 'Custom' : productById(id)!.label,
+        onChanged: (id) {
+          final selected = productById(id);
+          design.updatePipe(index, (p) {
+            if (selected == null) {
+              p.productId = null;
+            } else {
+              p.applyProduct(selected, p.nominalSizeIn ?? p.outsideDiameterIn.roundToDouble());
+            }
+          });
+        },
+      ),
+      DenseField(
+        key: Key('pipe-$index-nominal'),
+        value: (pipe.nominalSizeIn ?? pipe.outsideDiameterIn).toStringAsFixed(0),
+        numeric: true,
+        onChanged: (v) {
+          final parsed = parseNum(v);
+          if (parsed == null) return;
+          design.updatePipe(index, (p) {
+            final selected = p.product;
+            if (selected == null) {
+              p.nominalSizeIn = parsed;
+            } else {
+              p.applyProduct(selected, parsed);
+            }
+          });
+        },
+      ),
       DenseField(
         key: Key('pipe-$index-od'),
         value: pipe.outsideDiameterIn.toStringAsFixed(1),
@@ -178,6 +248,13 @@ class _PipeRow extends StatelessWidget {
         },
       ),
       Text(pipe.clockPosition, style: Mh.cellNum),
+      DenseDropdown<PsxConnector>(
+        key: Key('pipe-$index-psx'),
+        value: pipe.psx,
+        items: PsxConnector.values,
+        labelOf: (c) => c.label,
+        onChanged: (c) => design.updatePipe(index, (p) => p.applyPsx(c)),
+      ),
       Text(
         'E ${coords.eastIn.toStringAsFixed(1)} / N ${coords.northIn.toStringAsFixed(1)}',
         style: Mh.cellNum,
@@ -185,6 +262,8 @@ class _PipeRow extends StatelessWidget {
       IconButton(
         key: Key('pipe-$index-delete'),
         icon: const Icon(Icons.delete_outline, size: 16),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 24, minHeight: 22),
         visualDensity: VisualDensity.compact,
         tooltip: 'Delete pipe',
         onPressed: () => design.removePipeAt(index),
@@ -199,20 +278,26 @@ class _PipeRow extends StatelessWidget {
       );
     }
 
-    // Narrow screens: two stacked grid rows so every cell stays usable.
+    // Narrow screens: stacked grid rows so every cell stays usable.
+    final highlight = conflicted ? const Color(0xFFFDECEA) : null;
     return Column(
       children: [
         const GridHeaderRow(columns: [('Pipe', 3), ('Type', 3), ('O.D.', 3), ('Hole', 3), ('', 2)]),
         GridRow(
-          highlight: conflicted ? const Color(0xFFFDECEA) : null,
-          cells: [(cells[0], 3), (cells[1], 3), (cells[2], 3), (cells[3], 3), (cells[8], 2)],
+          highlight: highlight,
+          cells: [(cells[0], 3), (cells[1], 3), (cells[4], 3), (cells[5], 3), (cells[11], 2)],
         ),
         const GridHeaderRow(
           columns: [('Invert', 3), ('A-Clock', 3), ('Clock', 2), ('Hole X/Y', 4)],
         ),
         GridRow(
-          highlight: conflicted ? const Color(0xFFFDECEA) : null,
-          cells: [(cells[4], 3), (cells[5], 3), (cells[6], 2), (cells[7], 4)],
+          highlight: highlight,
+          cells: [(cells[6], 3), (cells[7], 3), (cells[8], 2), (cells[10], 4)],
+        ),
+        const GridHeaderRow(columns: [('Product', 4), ('Nom', 2), ('Connector', 5)]),
+        GridRow(
+          highlight: highlight,
+          cells: [(cells[2], 4), (cells[3], 2), (cells[9], 5)],
         ),
         const SizedBox(height: Mh.gap),
       ],

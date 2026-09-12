@@ -151,7 +151,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(design.pipes.length, initial + 1);
 
-    await tester.tap(find.byKey(Key('pipe-${design.pipes.length - 1}-delete')));
+    // The dense grid scrolls horizontally; bring the delete cell into view.
+    final deleteButton = find.byKey(Key('pipe-${design.pipes.length - 1}-delete'));
+    await tester.ensureVisible(deleteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(deleteButton);
     await tester.pumpAndSettle();
     expect(design.pipes.length, initial);
     expect(tester.takeException(), isNull);
