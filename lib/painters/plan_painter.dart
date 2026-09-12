@@ -68,8 +68,9 @@ class PlanPainter extends CustomPainter {
       labels.draw(
         canvas,
         '!! PENETRATION CONFLICT',
-        Offset(10, size.height - 20),
+        Offset(size.width - 9, size.height - 19),
         10.5,
+        align: LabelAnchor.right,
         bold: true,
         color: palette.conflict,
         avoidOverlap: false,
@@ -102,6 +103,9 @@ class PlanPainter extends CustomPainter {
       color: palette.callout,
       avoidOverlap: false,
     );
+    // Title bar and footer note are off limits to every other annotation.
+    labels.topGuard = 26;
+    labels.bottomGuard = 22;
   }
 
   /// Dashed compass crosshair through the structure centre.
@@ -257,11 +261,13 @@ class PlanPainter extends CustomPainter {
     labels.reserve(LabelPlacer.corridor(center, tip, pad: halfPipe + 2));
 
     // Angle callout parked outside the barrel on the pipe's own heading.
-    final vertical = angle < 12 || angle > 348 || (angle > 168 && angle < 192);
-    final onRight = angle < 180;
-    // Keep the 0 degree callout clear of the fixed North arrow.
-    final anchor = vertical && (angle < 12 || angle > 348)
-        ? tip + const Offset(46, 10)
+    final nearNorth = angle < 12 || angle > 348;
+    final vertical = nearNorth || (angle > 168 && angle < 192);
+    // Near North the callout straddles the fixed North arrow: headings just
+    // shy of 360 park to its left, headings just past 0 to its right.
+    final onRight = nearNorth ? angle < 12 : angle < 180;
+    final anchor = nearNorth
+        ? tip + Offset(onRight ? 46 : -46, 10)
         : tip + along * 14;
     final rect = labels.draw(
       canvas,
@@ -269,7 +275,7 @@ class PlanPainter extends CustomPainter {
       'HOLE ${inchesText(pipe.holeSizeIn)}\u00F8',
       Offset(anchor.dx, anchor.dy - (angle > 90 && angle < 270 ? 2 : 30)),
       8.5,
-      align: vertical && angle > 90
+      align: vertical && angle > 90 && !nearNorth
           ? LabelAnchor.center
           : (onRight ? LabelAnchor.left : LabelAnchor.right),
       color: color,

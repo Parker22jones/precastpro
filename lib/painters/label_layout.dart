@@ -19,8 +19,13 @@ class LabelPlacer {
   final Size size;
   final List<Rect> _placed = <Rect>[];
 
-  static const double _padding = 2.0;
+  static const double _padding = 7.0;
   static const double _spacing = 2.0;
+
+  /// Bands at the top and bottom of the sheet reserved for the title bar and
+  /// the footer note; no annotation is allowed to sit inside them.
+  double topGuard = 0;
+  double bottomGuard = 0;
 
   /// Marks an area of the canvas (a dimension line, a north arrow, a leader)
   /// as occupied so later annotations are nudged clear of it.
@@ -37,6 +42,7 @@ class LabelPlacer {
     Color color = Colors.black,
     bool avoidOverlap = true,
     double? maxWidth,
+    bool insideGuards = true,
   }) {
     final span = TextSpan(text: text, style: cadLabelStyle(fontSize, color, bold: bold));
     final measured = TextPainter(text: span, textDirection: TextDirection.ltr)..layout();
@@ -61,7 +67,10 @@ class LabelPlacer {
       LabelAnchor.right => anchor.dx - painter.width,
       LabelAnchor.center => anchor.dx - painter.width / 2,
     };
-    var rect = _clamp(Rect.fromLTWH(dx, anchor.dy, painter.width, painter.height));
+    var rect = _clamp(
+      Rect.fromLTWH(dx, anchor.dy, painter.width, painter.height),
+      guarded: insideGuards,
+    );
     if (avoidOverlap) rect = _resolve(rect);
 
     painter.paint(canvas, rect.topLeft);
@@ -79,12 +88,16 @@ class LabelPlacer {
     ).inflate(pad);
   }
 
-  Rect _clamp(Rect rect) {
+  Rect _clamp(Rect rect, {bool guarded = true}) {
+    final minTop = guarded ? math.max(_padding, topGuard) : _padding;
     final maxLeft = math.max(_padding, size.width - rect.width - _padding);
-    final maxTop = math.max(_padding, size.height - rect.height - _padding);
+    final maxTop = math.max(
+      minTop,
+      size.height - rect.height - (guarded ? math.max(_padding, bottomGuard) : _padding),
+    );
     return Rect.fromLTWH(
       rect.left.clamp(_padding, maxLeft),
-      rect.top.clamp(_padding, maxTop),
+      rect.top.clamp(minTop, maxTop),
       rect.width,
       rect.height,
     );
@@ -104,7 +117,10 @@ class LabelPlacer {
         final shifted = direction > 0
             ? candidate.top + (hit.bottom - candidate.top) + _spacing
             : candidate.top - ((candidate.bottom - hit.top) + _spacing);
-        if (shifted < _padding || shifted + candidate.height > size.height - _padding) break;
+        if (shifted < math.max(_padding, topGuard) ||
+            shifted + candidate.height > size.height - math.max(_padding, bottomGuard)) {
+          break;
+        }
         if ((shifted - rect.top).abs() > reach) break;
         candidate = Rect.fromLTWH(candidate.left, shifted, candidate.width, candidate.height);
       }

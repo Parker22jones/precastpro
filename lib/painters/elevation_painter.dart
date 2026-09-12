@@ -238,8 +238,9 @@ class ElevationPainter extends CustomPainter {
     _Map x,
     _Map y,
   ) {
-    final chainX = math.max(48.0, marginLeft - 44);
-    final overallX = math.max(16.0, marginLeft - 104);
+    final chainX = math.max(56.0, marginLeft - 44);
+    // Far enough in that the right-aligned overall reading clears the border.
+    final overallX = math.max(42.0, marginLeft - 96);
     final color = palette.dimension;
 
     for (final laid in layout.pieces) {
@@ -603,6 +604,9 @@ class ElevationPainter extends CustomPainter {
       align: LabelAnchor.right,
       color: palette.callout,
     );
+    // Title bar and scale-bar strip are off limits to every other annotation.
+    labels.topGuard = 26;
+    labels.bottomGuard = 22;
   }
 
   void _drawScaleBar(LabelPlacer labels, Canvas canvas, Size size, double scale) {
@@ -620,6 +624,7 @@ class ElevationPainter extends CustomPainter {
       8,
       color: palette.callout,
       avoidOverlap: false,
+      insideGuards: false,
     );
   }
 
