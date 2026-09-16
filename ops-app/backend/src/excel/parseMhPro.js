@@ -133,6 +133,9 @@ export async function parseMhProWorkbook(buffer) {
   };
   if (!preamble.jobName) warnings.push(`No job name found in the header block; using "${job.name}".`);
   if (skippedLines) warnings.push(`${skippedLines} line items had no structure name and were skipped.`);
+  if (columns.status == null) {
+    warnings.push('No Status column in this export; every piece imports as Shipping Status "Pending".');
+  }
 
   return {
     job,
