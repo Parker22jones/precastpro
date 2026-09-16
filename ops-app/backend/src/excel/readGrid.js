@@ -65,5 +65,13 @@ function readSpreadsheetXml(buffer) {
 }
 
 export async function readSheets(buffer) {
-  return isSpreadsheetXml(buffer) ? readSpreadsheetXml(buffer) : readXlsx(buffer);
+  try {
+    return isSpreadsheetXml(buffer) ? readSpreadsheetXml(buffer) : await readXlsx(buffer);
+  } catch {
+    const err = new Error(
+      'This file could not be read as a spreadsheet. Export it from MH Pro as .xlsx or "Order Summary (Excel XML)".',
+    );
+    err.statusCode = 400;
+    throw err;
+  }
 }
