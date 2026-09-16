@@ -27,7 +27,12 @@ router.post(
     for (const piece of pieces) byType[piece.componentType] = (byType[piece.componentType] || 0) + 1;
     res.json({
       ...parsed,
-      totals: { structures: parsed.structures.length, pieces: pieces.length, byType },
+      totals: {
+        structures: parsed.structures.length,
+        pieces: pieces.length,
+        byType,
+        weightLbs: Math.round(pieces.reduce((sum, piece) => sum + (piece.partWeight || 0), 0)),
+      },
     });
   }),
 );
@@ -79,8 +84,8 @@ router.post(
             Structure: [structures[index].id],
             'Component Type': piece.componentType,
             'Shipping Status': piece.shippingStatus,
+            'Weight (lbs)': piece.partWeight == null ? null : Math.round(piece.partWeight * 100) / 100,
             Description: piece.description,
-            'Part Weight': piece.partWeight,
             'Stack Position': piece.stackPosition,
           }),
         });

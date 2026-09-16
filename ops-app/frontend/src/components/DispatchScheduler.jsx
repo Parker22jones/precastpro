@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 
+/** Typical flatbed payload allowance; editable because permits and trailers vary. */
+const DEFAULT_WEIGHT_LIMIT_LBS = 48000;
+const lbs = (value) => `${Math.round(value).toLocaleString()} lbs`;
+
 export default function DispatchScheduler() {
+  const [weightLimit, setWeightLimit] = useState(DEFAULT_WEIGHT_LIMIT_LBS);
   const [loads, setLoads] = useState([]);
   const [pieces, setPieces] = useState([]);
   const [selected, setSelected] = useState(() => new Set());
@@ -70,6 +75,15 @@ export default function DispatchScheduler() {
       else next.add(id);
       return next;
     });
+
+  const selectedWeight = useMemo(() => {
+    const chosen = pieces.filter((piece) => selected.has(piece.id));
+    return {
+      total: chosen.reduce((sum, piece) => sum + (piece.weightLbs || 0), 0),
+      unknown: chosen.filter((piece) => piece.weightLbs == null).length,
+    };
+  }, [pieces, selected]);
+  const overLimit = weightLimit > 0 && selectedWeight.total > weightLimit;
 
   const sortedPieces = useMemo(
     () =>
@@ -150,6 +164,7 @@ export default function DispatchScheduler() {
                 <th>Component</th>
                 <th>Structure</th>
                 <th>Job</th>
+                <th>Weight</th>
                 <th>Shipping status</th>
               </tr>
             </thead>
@@ -167,12 +182,33 @@ export default function DispatchScheduler() {
                   <td>{piece.componentType}</td>
                   <td>{piece.structureName}</td>
                   <td>{piece.jobName}</td>
+                  <td>{piece.weightLbs == null ? '—' : lbs(piece.weightLbs)}</td>
                   <td>{piece.shippingStatus}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <div className={overLimit ? 'load-total over' : 'load-total'}>
+          <strong>
+            Total load weight: {lbs(selectedWeight.total)} ({selected.size} pieces)
+          </strong>
+          <label className="field inline">
+            <span>Limit</span>
+            <input
+              type="number"
+              min="0"
+              step="500"
+              value={weightLimit}
+              onChange={(event) => setWeightLimit(Number(event.target.value) || 0)}
+            />
+          </label>
+          {overLimit && <span>Over limit by {lbs(selectedWeight.total - weightLimit)}</span>}
+          {selectedWeight.unknown > 0 && (
+            <span className="muted">{selectedWeight.unknown} selected pieces have no weight</span>
+          )}
+        </div>
+
         {!busy && sortedPieces.length === 0 && (
           <p className="muted">
             No pieces are ready: a piece shows here once its structure is marked Poured and its

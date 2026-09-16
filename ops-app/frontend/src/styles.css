@@ -157,3 +157,35 @@ pre {
   overflow: auto;
   font-size: 12px;
 }
+
+.load-total {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-size: 15px;
+}
+
+.load-total.over {
+  border-color: #b42318;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.load-total .field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.load-total .field.inline input {
+  width: 110px;
+}

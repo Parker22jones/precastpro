@@ -61,13 +61,26 @@ export async function getSchema() {
   return schemaPromise;
 }
 
+/** The base's own spelling of a field, or null when the base has no such column. */
+export async function resolveFieldName(tableName, fieldName) {
+  const schema = await getSchema();
+  const known = schema.get(tableName);
+  if (!known) return fieldName;
+  return [...known].find((name) => name.toLowerCase() === fieldName.toLowerCase()) || null;
+}
+
+/** Matches on the base's own casing, so "Weight (lbs)" still finds a "Weight (LBS)" column. */
 export async function pickExistingFields(tableName, fields) {
   const schema = await getSchema();
   const known = schema.get(tableName);
   if (!known) return fields;
-  return Object.fromEntries(
-    Object.entries(fields).filter(([key, value]) => known.has(key) && value != null && value !== ''),
-  );
+  const byLowerName = new Map([...known].map((name) => [name.toLowerCase(), name]));
+  const picked = {};
+  for (const [key, value] of Object.entries(fields)) {
+    const actual = byLowerName.get(key.toLowerCase());
+    if (actual && value != null && value !== '') picked[actual] = value;
+  }
+  return picked;
 }
 
 export async function createRecords(name, rows) {

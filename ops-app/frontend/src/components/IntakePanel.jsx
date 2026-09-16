@@ -83,7 +83,8 @@ export default function IntakePanel() {
             {preview.job.contractor || '—'} ·{' '}
             {Object.entries(preview.totals.byType)
               .map(([type, count]) => `${count} ${type}`)
-              .join(', ')}
+              .join(', ')}{' '}
+            · {preview.totals.weightLbs.toLocaleString()} lbs total
           </p>
           {preview.warnings.map((warning) => (
             <p className="error" key={warning}>

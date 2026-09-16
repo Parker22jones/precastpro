@@ -1,5 +1,5 @@
 import express from 'express';
-import { createRecords, selectAll, updateRecords, TABLES } from '../airtable.js';
+import { createRecords, resolveFieldName, selectAll, updateRecords, TABLES } from '../airtable.js';
 
 const router = express.Router();
 const asyncRoute = (handler) => (req, res, next) => handler(req, res, next).catch(next);
@@ -82,14 +82,17 @@ router.post(
 router.get(
   '/pieces/shippable',
   asyncRoute(async (_req, res) => {
-    const [structures, pieces, jobs] = await Promise.all([
-      selectAll(TABLES.structures, {
-        filterByFormula: `{Production Status} = '${READY_PRODUCTION_STATUS}'`,
-      }),
-      selectAll(TABLES.pieces, {
-        filterByFormula: `OR(${SHIPPABLE_STATUSES.map((s) => `{Shipping Status} = '${s}'`).join(',')})`,
-      }),
-      selectAll(TABLES.jobs, { fields: ['Job Name'] }),
+    const [weightField, [structures, pieces, jobs]] = await Promise.all([
+      resolveFieldName(TABLES.pieces, 'Weight (lbs)'),
+      Promise.all([
+        selectAll(TABLES.structures, {
+          filterByFormula: `{Production Status} = '${READY_PRODUCTION_STATUS}'`,
+        }),
+        selectAll(TABLES.pieces, {
+          filterByFormula: `OR(${SHIPPABLE_STATUSES.map((s) => `{Shipping Status} = '${s}'`).join(',')})`,
+        }),
+        selectAll(TABLES.jobs, { fields: ['Job Name'] }),
+      ]),
     ]);
     const jobNames = new Map(jobs.map((job) => [job.id, job.fields['Job Name'] || '']));
     const structureById = new Map(structures.map((s) => [s.id, s]));
@@ -107,6 +110,7 @@ router.get(
             structureId: structure.id,
             structureName: structure.fields['Structure Name'] || '',
             jobName: jobNames.get((structure.fields.Job || [])[0]) || '',
+            weightLbs: weightField ? piece.fields[weightField] ?? null : null,
           };
         }),
     );

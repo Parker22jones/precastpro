@@ -29,12 +29,15 @@ cd ops-app/frontend && npm run dev    # http://localhost:5173 (proxies /api)
    `Accessory` (`columnMap.js`). Preview first, then push to `Jobs`, `Structures`, and
    `Pieces & Castings` with Production Status `Not Started` and Shipping Status mapped from the
    sheet's `Status` column when present (`OWED` → `Owed`, `SHIPPED` → `Shipped`), else `Pending`.
-   Imports only write fields that exist in the live base (`pickExistingFields`).
+   Each line item's `Part Weight` lands in the pieces table's `Weight (lbs)` column. Imports only
+   write fields that exist in the live base, matched case-insensitively (`pickExistingFields`), so a
+   base spelling like `Weight (LBS)` still works.
 2. **Batch production planner** — lists `Not Started` / `Scheduled` structures across all jobs,
    multi-select with checkboxes, pick a date, bulk-set `Target Production Date` + status `Scheduled`.
 3. **Dispatch & truck loads** — create a load (auto Load ID `LD-YYYYMMDD-NNN`, status `Building`),
    then select ready pieces across jobs and assign them: sets `Assigned Truck Load` and Shipping
-   Status `Loaded`.
+   Status `Loaded`. A sticky footer tallies the selected pieces' `Weight (lbs)` live against an
+   editable limit (default 48,000 lbs) and turns red once the load exceeds it.
 
 ## Base schema notes
 
