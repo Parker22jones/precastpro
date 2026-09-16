@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { createRecords, selectAll, TABLES } from '../airtable.js';
+import { createRecords, pickExistingFields, selectAll, TABLES } from '../airtable.js';
 import { parseMhProWorkbook } from '../excel/parseMhPro.js';
 
 const router = express.Router();
@@ -22,12 +22,12 @@ router.post(
   upload.single('file'),
   asyncRoute(async (req, res) => {
     const parsed = await parseMhProWorkbook(requireFile(req));
+    const pieces = parsed.structures.flatMap((structure) => structure.pieces);
+    const byType = {};
+    for (const piece of pieces) byType[piece.componentType] = (byType[piece.componentType] || 0) + 1;
     res.json({
       ...parsed,
-      totals: {
-        structures: parsed.structures.length,
-        pieces: parsed.structures.reduce((sum, s) => sum + s.pieces.length, 0),
-      },
+      totals: { structures: parsed.structures.length, pieces: pieces.length, byType },
     });
   }),
 );
@@ -46,39 +46,46 @@ router.post(
       (
         await createRecords(TABLES.jobs, [
           {
-            fields: {
+            fields: await pickExistingFields(TABLES.jobs, {
               'Job Name': jobName,
               Contractor: req.body.contractor || parsed.job.contractor || '',
               Status: 'Active',
-            },
+              'Job Number': parsed.job.jobNumber,
+              Location: parsed.job.location,
+            }),
           },
         ])
       )[0];
 
     const structures = await createRecords(
       TABLES.structures,
-      parsed.structures.map((structure) => ({
-        fields: {
-          'Structure Name': structure.name,
-          Job: [job.id],
-          'Station Number': structure.stationNumber || '',
-          'Production Status': 'Not Started',
-        },
-      })),
+      await Promise.all(
+        parsed.structures.map(async (structure) => ({
+          fields: await pickExistingFields(TABLES.structures, {
+            'Structure Name': structure.name,
+            Job: [job.id],
+            'Station Number': structure.stationNumber || '',
+            'Production Status': 'Not Started',
+          }),
+        })),
+      ),
     );
 
     const pieceRows = [];
-    parsed.structures.forEach((structure, index) => {
+    for (const [index, structure] of parsed.structures.entries()) {
       for (const piece of structure.pieces) {
         pieceRows.push({
-          fields: {
+          fields: await pickExistingFields(TABLES.pieces, {
             Structure: [structures[index].id],
             'Component Type': piece.componentType,
-            'Shipping Status': 'Pending',
-          },
+            'Shipping Status': piece.shippingStatus,
+            Description: piece.description,
+            'Part Weight': piece.partWeight,
+            'Stack Position': piece.stackPosition,
+          }),
         });
       }
-    });
+    }
     const pieces = await createRecords(TABLES.pieces, pieceRows);
 
     res.json({

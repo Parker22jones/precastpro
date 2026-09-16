@@ -40,6 +40,36 @@ export async function inBatches(items, worker, size = 10) {
   return results;
 }
 
+let schemaPromise = null;
+
+/** Field names per table, so imports only write columns that exist in the base. */
+export async function getSchema() {
+  if (!schemaPromise) {
+    schemaPromise = (async () => {
+      const baseId = process.env.AIRTABLE_BASE_ID;
+      const response = await fetch(`https://api.airtable.com/v0/meta/bases/${baseId}/tables`, {
+        headers: { Authorization: `Bearer ${process.env.AIRTABLE_PERSONAL_ACCESS_TOKEN}` },
+      });
+      if (!response.ok) throw new Error(`Airtable schema request failed (${response.status})`);
+      const payload = await response.json();
+      return new Map(payload.tables.map((t) => [t.name, new Set(t.fields.map((f) => f.name))]));
+    })().catch((err) => {
+      schemaPromise = null;
+      throw err;
+    });
+  }
+  return schemaPromise;
+}
+
+export async function pickExistingFields(tableName, fields) {
+  const schema = await getSchema();
+  const known = schema.get(tableName);
+  if (!known) return fields;
+  return Object.fromEntries(
+    Object.entries(fields).filter(([key, value]) => known.has(key) && value != null && value !== ''),
+  );
+}
+
 export async function createRecords(name, rows) {
   const created = await inBatches(rows, (chunk) => table(name).create(chunk, { typecast: true }));
   return created.map((r) => ({ id: r.id, fields: r.fields }));

@@ -16,8 +16,8 @@ export default function IntakePanel() {
     setPreview(null);
     setFile(selected);
     if (!selected) return;
-    if (!selected.name.toLowerCase().endsWith('.xlsx')) {
-      setError('Please drop an .xlsx file exported from MH Pro.');
+    if (!/\.(xlsx|xml)$/i.test(selected.name)) {
+      setError('Please drop an MH Pro order summary (.xlsx or Excel XML .xml).');
       return;
     }
     setBusy(true);
@@ -59,11 +59,11 @@ export default function IntakePanel() {
         }}
         onClick={() => inputRef.current?.click()}
       >
-        <p>{file ? file.name : 'Drag an MH Pro .xlsx export here, or click to browse'}</p>
+        <p>{file ? file.name : 'Drag an MH Pro order summary (.xlsx or .xml) here, or click to browse'}</p>
         <input
           ref={inputRef}
           type="file"
-          accept=".xlsx"
+          accept=".xlsx,.xml"
           hidden
           onChange={(event) => handleFile(event.target.files[0])}
         />
@@ -79,8 +79,11 @@ export default function IntakePanel() {
             {preview.job.name ? ` for "${preview.job.name}"` : ''}
           </h3>
           <p className="muted">
-            Sheet "{preview.detected.sheet}", header row {preview.detected.headerRow}, BOM columns:{' '}
-            {preview.detected.bomColumns.join(', ') || 'none detected'}
+            Sheet "{preview.detected.sheet}", header row {preview.detected.headerRow}, contractor{' '}
+            {preview.job.contractor || '—'} ·{' '}
+            {Object.entries(preview.totals.byType)
+              .map(([type, count]) => `${count} ${type}`)
+              .join(', ')}
           </p>
           {preview.warnings.map((warning) => (
             <p className="error" key={warning}>
@@ -92,16 +95,20 @@ export default function IntakePanel() {
               <thead>
                 <tr>
                   <th>Structure</th>
-                  <th>Station</th>
                   <th>Pieces</th>
+                  <th>Bill of materials</th>
                 </tr>
               </thead>
               <tbody>
                 {preview.structures.map((structure) => (
                   <tr key={structure.name}>
                     <td>{structure.name}</td>
-                    <td>{structure.stationNumber}</td>
-                    <td>{structure.pieces.map((piece) => piece.componentType).join(', ')}</td>
+                    <td>{structure.pieces.length}</td>
+                    <td>
+                      {structure.pieces
+                        .map((piece) => `${piece.componentType}: ${piece.description}`)
+                        .join(' · ')}
+                    </td>
                   </tr>
                 ))}
               </tbody>

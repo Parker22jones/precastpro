@@ -19,11 +19,17 @@ cd ops-app/frontend && npm run dev    # http://localhost:5173 (proxies /api)
 
 ## Features
 
-1. **MH Pro Excel intake** — drag an `.xlsx` onto the dashboard. The backend parses it, shows a
-   preview (detected header row, BOM columns, structures, pieces), then pushes to `Jobs`,
-   `Structures`, and `Pieces & Castings` with Production Status `Not Started` and Shipping Status
-   `Pending`. Column matching lives in `backend/src/excel/columnMap.js` and is synonym-based; tune it
-   once a real MH Pro export is available.
+1. **MH Pro order-summary intake** — drag an MH Pro export onto the dashboard. Both serializations
+   are supported: native `.xlsx` and MH Pro's "Excel XML" (SpreadsheetML `.xml`) export
+   (`backend/src/excel/readGrid.js` normalizes both into a row grid). The parser
+   (`backend/src/excel/parseMhPro.js`) reads job name + contractor from the preamble, locates the
+   line-item header row by synonym match (`Structure Name` / `Description` / `Quantity` / ...),
+   skips `Total Weight (lbs)` separator rows, groups line items by structure, expands each line by
+   its `Quantity`, and classifies descriptions into `Base` / `Riser` / `Top` / `Casting` /
+   `Accessory` (`columnMap.js`). Preview first, then push to `Jobs`, `Structures`, and
+   `Pieces & Castings` with Production Status `Not Started` and Shipping Status mapped from the
+   sheet's `Status` column when present (`OWED` → `Owed`, `SHIPPED` → `Shipped`), else `Pending`.
+   Imports only write fields that exist in the live base (`pickExistingFields`).
 2. **Batch production planner** — lists `Not Started` / `Scheduled` structures across all jobs,
    multi-select with checkboxes, pick a date, bulk-set `Target Production Date` + status `Scheduled`.
 3. **Dispatch & truck loads** — create a load (auto Load ID `LD-YYYYMMDD-NNN`, status `Building`),
@@ -47,7 +53,7 @@ So "ready to ship" = pieces whose parent structure is `Poured` and whose shippin
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/api/health` | config check |
-| POST | `/api/intake/preview` | parse an xlsx without writing |
+| POST | `/api/intake/preview` | parse an .xlsx/.xml export without writing |
 | POST | `/api/intake/import` | parse + create Airtable records |
 | GET | `/api/structures` | plannable structures |
 | POST | `/api/structures/schedule` | bulk set target date + `Scheduled` |
