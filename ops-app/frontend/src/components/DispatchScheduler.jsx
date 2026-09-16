@@ -3,10 +3,11 @@ import { api } from '../api.js';
 
 /** Typical flatbed payload allowance; editable because permits and trailers vary. */
 const DEFAULT_WEIGHT_LIMIT_LBS = 48000;
-const lbs = (value) => `${Math.round(value).toLocaleString()} lbs`;
+/** Two decimals, so the rows a dispatcher reads always add up to the footer total. */
+const lbs = (value) => `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} lbs`;
 
 export default function DispatchScheduler() {
-  const [weightLimit, setWeightLimit] = useState(DEFAULT_WEIGHT_LIMIT_LBS);
+  const [weightLimit, setWeightLimit] = useState(String(DEFAULT_WEIGHT_LIMIT_LBS));
   const [loads, setLoads] = useState([]);
   const [pieces, setPieces] = useState([]);
   const [selected, setSelected] = useState(() => new Set());
@@ -68,6 +69,9 @@ export default function DispatchScheduler() {
     }
   };
 
+  const allVisibleSelected = pieces.length > 0 && selected.size === pieces.length;
+  const toggleAll = () => setSelected(allVisibleSelected ? new Set() : new Set(pieces.map((p) => p.id)));
+
   const toggle = (id) =>
     setSelected((current) => {
       const next = new Set(current);
@@ -83,7 +87,9 @@ export default function DispatchScheduler() {
       unknown: chosen.filter((piece) => piece.weightLbs == null).length,
     };
   }, [pieces, selected]);
-  const overLimit = weightLimit > 0 && selectedWeight.total > weightLimit;
+  const limit = weightLimit.trim() === '' ? null : Number(weightLimit);
+  const hasLimit = limit != null && Number.isFinite(limit) && limit > 0;
+  const overLimit = hasLimit && selectedWeight.total > limit;
 
   const sortedPieces = useMemo(
     () =>
@@ -159,7 +165,14 @@ export default function DispatchScheduler() {
           <table>
             <thead>
               <tr>
-                <th />
+                <th>
+                  <input
+                    type="checkbox"
+                    title="Select all ready pieces"
+                    checked={allVisibleSelected}
+                    onChange={toggleAll}
+                  />
+                </th>
                 <th>Piece</th>
                 <th>Component</th>
                 <th>Structure</th>
@@ -199,11 +212,13 @@ export default function DispatchScheduler() {
               type="number"
               min="0"
               step="500"
+              placeholder="no limit"
               value={weightLimit}
-              onChange={(event) => setWeightLimit(Number(event.target.value) || 0)}
+              onChange={(event) => setWeightLimit(event.target.value)}
             />
           </label>
-          {overLimit && <span>Over limit by {lbs(selectedWeight.total - weightLimit)}</span>}
+          {overLimit && <span>Over limit by {lbs(selectedWeight.total - limit)}</span>}
+          {!hasLimit && <span className="muted">No limit set</span>}
           {selectedWeight.unknown > 0 && (
             <span className="muted">{selectedWeight.unknown} selected pieces have no weight</span>
           )}
