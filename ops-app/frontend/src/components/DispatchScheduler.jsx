@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 
-/** Typical flatbed payload allowance; editable because permits and trailers vary. */
-const DEFAULT_WEIGHT_LIMIT_LBS = 48000;
 /** Two decimals, so the rows a dispatcher reads always add up to the footer total. */
 const lbs = (value) => `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} lbs`;
 
 export default function DispatchScheduler() {
-  const [weightLimit, setWeightLimit] = useState(String(DEFAULT_WEIGHT_LIMIT_LBS));
   const [loads, setLoads] = useState([]);
   const [pieces, setPieces] = useState([]);
   const [selected, setSelected] = useState(() => new Set());
@@ -87,9 +84,6 @@ export default function DispatchScheduler() {
       unknown: chosen.filter((piece) => piece.weightLbs == null).length,
     };
   }, [pieces, selected]);
-  const limit = weightLimit.trim() === '' ? null : Number(weightLimit);
-  const hasLimit = limit != null && Number.isFinite(limit) && limit > 0;
-  const overLimit = hasLimit && selectedWeight.total > limit;
 
   const sortedPieces = useMemo(
     () =>
@@ -202,23 +196,10 @@ export default function DispatchScheduler() {
             </tbody>
           </table>
         </div>
-        <div className={overLimit ? 'load-total over' : 'load-total'}>
+        <div className="load-total">
           <strong>
             Total load weight: {lbs(selectedWeight.total)} ({selected.size} pieces)
           </strong>
-          <label className="field inline">
-            <span>Limit</span>
-            <input
-              type="number"
-              min="0"
-              step="500"
-              placeholder="no limit"
-              value={weightLimit}
-              onChange={(event) => setWeightLimit(event.target.value)}
-            />
-          </label>
-          {overLimit && <span>Over limit by {lbs(selectedWeight.total - limit)}</span>}
-          {!hasLimit && <span className="muted">No limit set</span>}
           {selectedWeight.unknown > 0 && (
             <span className="muted">{selectedWeight.unknown} selected pieces have no weight</span>
           )}
